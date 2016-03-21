@@ -37,7 +37,7 @@ class Downloader {
 	 * You don't have to call this method as it is called automatically when
 	 * needed.
 	 *
-	 * @throws Exception
+	 * @throws Exception Exception is thrown in case of failed multi-cURL initialization.
 	 */
 	public static function init() {
 		if( self::$handle )
@@ -122,30 +122,21 @@ class Downloader {
 	/**
 	 * Adds a download request to the queue.
 	 *
+	 *  Structure of options array:
+	 *  - **url** `string` Request URL.
+	 *  - **type** `string` (optional) GET, POST, or any request method acceptable by HTTP. Defaults to POST if `data` is specified and not NULL. Otherwise defaults to GET.
+	 *  - **data** `string|array|null` (optional) Data to be posted to the URL. Defaults to NULL.
+	 *  - **outputFile** `string|null` (optional) Will save the response to the specified file instead of returning it in the download result body. Defaults to NULL.
+	 *  - **verify** `bool` (optional) TRUE to verify SSL certificates on HTTPS request. Defaults to TRUE.
+	 *  - **maxRedirs** `int` (optional) Maximum number of redirects to follow. Defaults to 0.
+	 *  - **timeout** `float` (optional) Number of seconds before download operation is considered timed out and fails.
+	 *  - **proxy** {@see \Web\Proxy} (optional) Instance of the Proxy class to use for connection. Defaults to NULL.
+	 *  - **header** `array` (optional) An associative array of additional HTTP request headers to be sent. Key of array element is the header name. First request line also may be modified if array contains an element with the empty string key.
+	 *  - **curlOptions** `array` (optional) An associative array to be passed to {@see curl_setopt_array()} function before starting the download.
+	 *
 	 * @param array $options An associative array of download options.
-	 *
-	 *  - `url` string Request URL.
-	 *
-	 *  - `type` string (optional) GET, POST, or any request method acceptable by HTTP. Defaults to POST if `data` is specified and not NULL. Otherwise defaults to GET.
-	 *
-	 *  - `data` string|array|null (optional) Data to be posted to the URL. Defaults to NULL.
-	 *
-	 *  - `outputFile` string|null (optional) Will save the response to the specified file instead of returning it in the download result body. Defaults to NULL.
-	 *
-	 *  - `verify` bool (optional) TRUE to verify SSL certificates on HTTPS request. Defaults to TRUE.
-	 *
-	 *  - `maxRedirs` int (optional) Maximum number of redirects to follow. Defaults to 0.
-	 *
-	 *  - `timeout` float (optional) Number of seconds before download operation is considered timed out and fails.
-	 *
-	 *  - `proxy` Web\Proxy (optional) Instance of the proxy to use for connection. Defaults to NULL.
-	 *
-	 *  - `header` array (optional) An associative array of additional HTTP request headers to be sent. Key of array element is the header name. First request line also may be modified if array contains an element with the empty string key.
-	 *
-	 *  - `curlOptions` array (optional) An associative array to be passed to curl_setopt_array() function before starting the download.
-	 *
 	 * @return false|int Returns ID of the download in the queue or FALSE in case of an error.
-	 * @throws Exception
+	 * @throws Exception Exception is thrown in case of failed automatic multi-cURL initialization.
 	 */
 	public static function beginDownload($options) {
 		$url = $options['url'];
@@ -354,10 +345,20 @@ class Downloader {
 
 	/**
 	 * Gets the result of queued download and removes the download from the queue.
-	 * 
+	 *
 	 * This method will block until download finishes. This method will return
 	 * NULL on operation timeout if the timeout parameter is not NULL. If the
 	 * operation times out the download is not removed from the queue.
+	 *
+	 * Structure of returned associative array:
+	 * - **shd** `array` Request headers hat were meant to be sent with request.
+	 * - **request** `string` Request headers that were actually sent.
+	 * - **header** `array` An associative array of received headers (all keys are upper case).
+	 * - **body** `string|bool` Body of the response or the request result. It will contain TRUE or FALSE only if `outputFile` option was not NULL or CURLOPT_RETURNTRANSFER option was overriden with value of 0.
+	 * - **http_code** `int` HTTP response code.
+	 * - **last_url** `string` Last effective URL that the response body belongs to. It may differ from the URL that was given in options in case if there were any redirects followed.
+	 * - **error_code** `int` (optional) cURL error code in case if there was an error (not CURLE_OK). See {@see curl_errno()}.
+	 * - **error** `string` (optional) cURL error as text returned by {@see curl_error()}.
 	 *
 	 * @param int $id ID of the download returned by beginDownload(), waitAllDownloads(), waitDownload() or waitAnyDownload().
 	 * @param null|float $timeout (optional) Maximum time in seconds to wait for the download to finish. NULL means to wait indefinitely. Defaults to NULL.
@@ -373,19 +374,20 @@ class Downloader {
 			return null;
 		$data = &self::$activeDownloads[$id];
 		curl_multi_remove_handle(self::$handle, $data['handle']);
-		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle']);
+		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle'], $data['done']);
 		return $data;
 	}
 
 	/**
 	 * Gets the result of first queued download that has finished and removes that download from the queue.
-	 * 
+	 *
 	 * This method will block until any queued download finishes. This method
 	 * will return NULL on operation timeout if the timeout	parameter is not
 	 * NULL.
 	 *
 	 * @param null|float $timeout (optional) Maximum time in seconds to wait for any download to finish. NULL means to wait indefinitely. Defaults to NULL.
 	 * @return array|false|null Returns an associative array of the finished download result, NULL if operation times out, or FALSE if there was an error with multi-cURL.
+	 * @see endDownload() for returned associative array structure.
 	 */
 	public static function endAnyDownload($timeout = null) {
 		if( !self::$handle || empty(self::$activeDownloads) )
@@ -397,7 +399,7 @@ class Downloader {
 			return null;
 		$data = &self::$activeDownloads[$id];
 		curl_multi_remove_handle(self::$handle, $data['handle']);
-		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle']);
+		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle'], $data['done']);
 		return $data;
 	}
 
@@ -415,14 +417,16 @@ class Downloader {
 	}
 
 	/**
-	 * Downloads a signle result.
+	 * Downloads a single result.
 	 *
 	 * This method blocks until download finishes. It can be used when there is
 	 * no need in multiple simultaneous downloads.
 	 *
-	 * @param array $options Download options. See beginDownload() method.
+	 * @param array $options An associative array of download options.
 	 * @return array|false Returns an array of download result or FALSE in case of unknown error with cURL.
-	 * @see beginDownload()
+	 * @throws Exception Exception is thrown in case of failed automatic multi-cURL initialization.
+	 * @see beginDownload() for options array structure.
+	 * @see endDownload() for returned associative array structure.
 	 */
 	public static function download($options) {
 		$id = self::beginDownload($options);

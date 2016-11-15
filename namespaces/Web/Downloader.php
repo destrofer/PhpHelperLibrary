@@ -131,7 +131,7 @@ class Downloader {
 	 *  - **maxRedirs** `int` (optional) Maximum number of redirects to follow. Defaults to 0.
 	 *  - **timeout** `float` (optional) Number of seconds before download operation is considered timed out and fails.
 	 *  - **proxy** {@see \Web\Proxy} (optional) Instance of the Proxy class to use for connection. Defaults to NULL.
-	 *  - **header** `array` (optional) An associative array of additional HTTP request headers to be sent. Key of array element is the header name. First request line also may be modified if array contains an element with the empty string key.
+	 *  - **headers** `array` (optional) An associative array of additional HTTP request headers to be sent. Key of array element is the header name. First request line also may be modified if array contains an element with the empty string key.
 	 *  - **curlOptions** `array` (optional) An associative array to be passed to {@see curl_setopt_array()} function before starting the download.
 	 *
 	 * @param array $options An associative array of download options.

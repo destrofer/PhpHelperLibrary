@@ -43,25 +43,39 @@ class SmartArrayConverter
 					continue;
 				if( !array_key_exists($propertyName, $array) )
 					continue;
+				$expectedType = ($docBlock && preg_match("#@var[ \t]+([\\\\a-z0-9_]+(?:\\[\\])*)#isu", $docBlock, $mtc)) ? $mtc[1] : 'mixed';
 				$value = is_object($array) ? $array->$propertyName : $array[$propertyName];
-				if( (is_array($value) || is_object($value)) && $docBlock && preg_match('#@var\\s+([\\\\a-z0-9_]+)#isu', $docBlock, $mtc) ) {
-					if( $mtc[1] == 'object' )
-						$mtc[1] = '\\stdClass';
-					$className = class_exists($mtc[1]) ? $mtc[1] : ($class->getNamespaceName() . '\\' . $mtc[1]);
-					if( class_exists($className) ) {
-						if( method_exists($className, 'fromArray') )
-							$property->setValue($newObject, call_user_func($className . '::fromArray', $value));
-						else
-							$property->setValue($newObject, self::fillObjectFromArray($className, $value));
-					}
-					else
-						$property->setValue($newObject, $value);
-				}
-				else
-					$property->setValue($newObject, $value);
+				$property->setValue($newObject, self::processValue($class->getNamespaceName(), $expectedType, $value));
 			}
 		}
 		return $newObject;
+	}
+
+	private static function processValue($namespace, $expectedType, &$value) {
+		if( !is_array($value) && !is_object($value) )
+			return $value;
+
+		if( preg_match('#^(.*)\\[\\]$#sUu', $expectedType, $mtc) ) {
+			$newValue = [];
+			foreach( $value as $k => &$v )
+				$newValue[$k] = self::processValue($namespace, $mtc[1], $v);
+			return $newValue;
+		}
+
+		if( $expectedType == 'array' || ($expectedType == 'mixed' && is_array($value)) )
+			return self::processValue($namespace, 'mixed[]', $value);
+
+		if( $expectedType == 'object' || $expectedType == 'mixed' )
+			$expectedType = '\\stdClass';
+
+		$className = class_exists($expectedType) ? $expectedType : ($namespace . '\\' . $expectedType);
+		if( !class_exists($className) )
+			return $value;
+
+		if( method_exists($className, 'fromArray') )
+			return call_user_func($className . '::fromArray', $value);
+
+		return self::fillObjectFromArray($className, $value);
 	}
 
 	/**

@@ -106,13 +106,22 @@ class SmartArrayConverter
 				else
 					continue;
 				$value = $property->getValue($object);
-				if( is_object($value) ) {
-					if( method_exists($value, 'toArray') )
-						$value = call_user_func([$value, 'toArray']);
-					else
-						$value = self::objectToArray($value);
+				if( is_array($value) ) {
+					$newValue = [];
+					foreach( $value as $k => &$v )
+						$newValue[$k] = self::objectToArray($v);
+					$array[$propertyName] = $newValue;
+					unset($newValue);
 				}
-				$array[$propertyName] = $value;
+				else {
+					if( is_object($value) ) {
+						if( method_exists($value, 'toArray') )
+							$value = call_user_func([$value, 'toArray']);
+						else
+							$value = self::objectToArray($value);
+					}
+					$array[$propertyName] = $value;
+				}
 			}
 		}
 		return $array;

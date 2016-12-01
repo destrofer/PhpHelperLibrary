@@ -211,6 +211,7 @@ class Downloader {
 		foreach( $headers as $k => $v )
 			$sendHeaders[] = ($k == '' || is_numeric($k)) ? $v : "$k: $v";
 
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $type);
 		curl_setopt($ch, CURLOPT_TIMEOUT_MS, $timeout);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, $sendHeaders);
 		curl_setopt($ch, CURLINFO_HEADER_OUT, true);

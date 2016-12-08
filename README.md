@@ -12,10 +12,10 @@ After installing composer you can add dependency of your project on this package
 by executing following command:
 
 ```
-php composer.phar require destrofer/helper-library:^3.0.0
+php composer.phar require destrofer/helper-library:^v3.0.0
 ```
 
-or by adding `"destrofer/helper-library": "^3.0.0"` to `require` block in
+or by adding `"destrofer/helper-library": "^v3.0.0"` to `require` block in
 `composer.json`.
 
 == License ==

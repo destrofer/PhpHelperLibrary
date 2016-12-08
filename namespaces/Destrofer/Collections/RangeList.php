@@ -6,7 +6,7 @@
  * @link https://github.com/destrofer/PhpHelperLibrary
  */
 
-namespace Collections;
+namespace Destrofer\Collections;
 
 use \InvalidArgumentException;
 

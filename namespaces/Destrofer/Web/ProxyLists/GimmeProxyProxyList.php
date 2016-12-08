@@ -6,11 +6,11 @@
  * @link https://github.com/destrofer/PhpHelperLibrary
  */
 
-namespace Web\ProxyLists;
+namespace Destrofer\Web\ProxyLists;
 
-use Web\Downloader;
-use Web\Proxy;
-use Web\ProxyList;
+use Destrofer\Web\Downloader;
+use Destrofer\Web\Proxy;
+use Destrofer\Web\ProxyList;
 
 /**
  * @link http://gimmeproxy.com/#how API documentation

@@ -6,7 +6,7 @@
  * @link https://github.com/destrofer/PhpHelperLibrary
  */
 
-namespace Data\Processing;
+namespace Destrofer\Data\Processing;
 
 class GroupedDataProcessor
 {

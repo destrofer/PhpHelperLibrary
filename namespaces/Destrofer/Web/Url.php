@@ -6,7 +6,7 @@
  * @link https://github.com/destrofer/PhpHelperLibrary
  */
 
-namespace Web;
+namespace Destrofer\Web;
 use \Exception;
 
 class Url {

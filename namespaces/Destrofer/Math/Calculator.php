@@ -6,7 +6,7 @@
  * @link https://github.com/destrofer/PhpHelperLibrary
  */
 
-namespace Math;
+namespace Destrofer\Math;
 
 class Calculator {
 	const ERROR_VARIABLE_NOT_FOUND = 'variable_not_found';

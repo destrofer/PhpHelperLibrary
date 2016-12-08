@@ -6,10 +6,10 @@
  * @link https://github.com/destrofer/PhpHelperLibrary
  */
 
-namespace Web;
+namespace Destrofer\Web;
 
 use \Exception;
-use Web\Proxy;
+use Destrofer\Web\Proxy;
 
 class Downloader {
 	private static $registeredShutdown = false;
@@ -130,7 +130,7 @@ class Downloader {
 	 *  - **verify** `bool` (optional) TRUE to verify SSL certificates on HTTPS request. Defaults to TRUE.
 	 *  - **maxRedirs** `int` (optional) Maximum number of redirects to follow. Defaults to 0.
 	 *  - **timeout** `float` (optional) Number of seconds before download operation is considered timed out and fails.
-	 *  - **proxy** {@see \Web\Proxy} (optional) Instance of the Proxy class to use for connection. Defaults to NULL.
+	 *  - **proxy** {@see \Destrofer\Web\Proxy} (optional) Instance of the Proxy class to use for connection. Defaults to NULL.
 	 *  - **headers** `array` (optional) An associative array of additional HTTP request headers to be sent. Key of array element is the header name. First request line also may be modified if array contains an element with the empty string key.
 	 *  - **curlOptions** `array` (optional) An associative array to be passed to {@see curl_setopt_array()} function before starting the download.
 	 *

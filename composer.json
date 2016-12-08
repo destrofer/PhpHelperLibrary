@@ -1,0 +1,24 @@
+{
+    "name": "destrofer/helper-library",
+    "description": "Library of classes that might be useful",
+    "keywords": ["destrofer", "helpers", "multi-download"],
+    "homepage": "https://github.com/destrofer/PhpHelperLibrary",
+    "type": "library",
+    "license": "LGPL-3",
+    "authors": [
+        {
+            "name": "Viacheslav Soroka",
+			"role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.5.0"
+    },
+    "require-dev": {
+    },
+    "autoload": {
+        "psr-4": {
+            "Destrofer\\": "namespaces\\Destrofer"
+        }
+    }
+}

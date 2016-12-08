@@ -6,7 +6,7 @@
  * @link https://github.com/destrofer/PhpHelperLibrary
  */
 
-namespace Data\Converting;
+namespace Destrofer\Data\Converting;
 
 /**
  * Converts arrays to objects and vice versa.

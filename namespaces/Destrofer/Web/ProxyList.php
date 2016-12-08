@@ -8,6 +8,8 @@
 
 namespace Destrofer\Web;
 
+use \Exception;
+
 abstract class ProxyList {
 	/**
 	 * Returns a list of proxies.

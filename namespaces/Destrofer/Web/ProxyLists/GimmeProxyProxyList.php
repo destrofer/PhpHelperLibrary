@@ -26,7 +26,7 @@ class GimmeProxyProxyList extends ProxyList {
 	 *
 	 * @param int $limit
 	 * @return false|int Returns ID of the asynchronous download or FALSE in case of an error.
-	 * @throws Exception Exception is thrown in case of failed automatic multi-cURL initialization.
+	 * @throws \Exception Exception is thrown in case of failed automatic multi-cURL initialization.
 	 */
 	public function asyncBeginGetProxies($limit = 100) {
 		return Downloader::beginDownload([

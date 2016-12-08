@@ -19,21 +19,30 @@ class GimmeProxyProxyList extends ProxyList {
 	const API_URL = 'http://gimmeproxy.com/api/getProxy';
 	
 	/**
-	 * Returns a list of proxies.
-	 * 
+	 * Begins the asynchronous download process for retreiving list of proxies.
+	 *
 	 * Please note that according to gimmeproxy.com documentation the response
-	 * may return only one proxy.
-	 * 
+	 * may return only one proxy so the $limit parameter is ignored.
+	 *
 	 * @param int $limit
-	 * @return Proxy[]|null
+	 * @return false|int Returns ID of the asynchronous download or FALSE in case of an error.
+	 * @throws Exception Exception is thrown in case of failed automatic multi-cURL initialization.
 	 */
-	public function getProxies($limit = 100) {
-		// $limit = min(max($limit, 1), 100);
-		$data = Downloader::download([
+	public function asyncBeginGetProxies($limit = 100) {
+		return Downloader::beginDownload([
 			'url' => self::API_URL,
 		]);
+	}
 
-		if( $data['http_code'] != 200 )
+	/**
+	 * @inheritdoc
+	 */
+	public function asyncEndGetProxies($downloadId) {
+		if( !$downloadId )
+			return null;
+		$data = Downloader::endDownload($downloadId);
+
+		if( !$data || $data['http_code'] != 200 )
 			return null;
 
 		$result = json_decode($data['body'], true);

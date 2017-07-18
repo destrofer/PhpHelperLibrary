@@ -22,6 +22,6 @@
         }
     },
     "archive": {
-        "exclude": ["/tests"]
+        "exclude": ["/tests/**"]
     }
 }

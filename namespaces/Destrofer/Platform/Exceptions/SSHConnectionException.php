@@ -9,4 +9,6 @@
 namespace Destrofer\Platform\Exceptions;
 
 class SSHConnectionException extends SSHException {
+	const REASON_NOT_CONNECTED = 0;
+	const REASON_CONNECTION_FAILED = 1;
 }

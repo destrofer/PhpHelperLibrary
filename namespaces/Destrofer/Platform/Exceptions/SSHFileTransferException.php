@@ -9,4 +9,6 @@
 namespace Destrofer\Platform\Exceptions;
 
 class SSHFileTransferException extends SSHException {
+	const REASON_TRANSFER_FAILED = 0;
+	const REASON_CANNOT_CREATE_TEMPORARY_FILE = 1;
 }

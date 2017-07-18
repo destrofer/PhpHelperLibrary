@@ -9,4 +9,6 @@
 namespace Destrofer\Platform\Exceptions;
 
 class SSHExecException extends SSHException {
+	const REASON_EXEC_FAILED = 0;
+	const REASON_BAD_EXIT_STATUS_FORMAT = 1;
 }

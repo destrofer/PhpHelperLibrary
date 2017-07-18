@@ -66,8 +66,13 @@ class SSHSession {
 		else
 			$this->session = ssh2_connect($info[0]);
 
-		if( !$this->session )
-			throw new SSHConnectionException("Couldn't connect to node SSH daemon.");
+		if( !$this->session ) {
+			if( $this->logCommands )
+				$this->log[] = "Failed to connect to {$host}";
+			throw new SSHConnectionException("Couldn't connect to node SSH daemon.", SSHConnectionException::REASON_CONNECTION_FAILED);
+		}
+		if( $this->logCommands )
+			$this->log[] = "Connected to {$host}";
 
 		return $this;
 	}
@@ -80,8 +85,28 @@ class SSHSession {
 	 */
 	public function getFingerprint() {
 		if( !$this->session )
-			throw new SSHConnectionException("SSH session is not open.");
+			throw new SSHConnectionException("SSH session is not open.", SSHConnectionException::REASON_NOT_CONNECTED);
 		return strtoupper(ssh2_fingerprint($this->session, SSH2_FINGERPRINT_SHA1 | SSH2_FINGERPRINT_HEX));
+	}
+
+	/**
+	 * Checks fingerprint of remote host.
+	 *
+	 * @param string $expectedFingerprint
+	 * @throws SSHAuthenticationException
+	 */
+	protected function checkFingerprint($expectedFingerprint) {
+		if( $expectedFingerprint !== null ) {
+			$fingerprint = $this->getFingerprint();
+			if( strtoupper($expectedFingerprint) !== $fingerprint ) {
+				$msg = "Authentication is not safe since SSH fingerprint ({$fingerprint}) differs from the one expected.";
+				if( $this->logCommands )
+					$this->log[] = $msg;
+				throw new SSHAuthenticationException($msg, SSHAuthenticationException::REASON_BAD_FINGERPRINT);
+			}
+			if( $this->logCommands )
+				$this->log[] = "Remote host fingerprint matches expected fingerprint.";
+		}
 	}
 
 	/**
@@ -98,25 +123,44 @@ class SSHSession {
 	 */
 	public function authenticateUsingKeys($user, $privateKeyFile, $publicKeyFile, $expectedFingerprint = null, $passPhrase = null) {
 		if( !$this->session )
-			throw new SSHConnectionException("SSH session is not open.");
+			throw new SSHConnectionException("SSH session is not open.", SSHConnectionException::REASON_NOT_CONNECTED);
 		if( !$this->authenticated ) {
-			if( !is_file($privateKeyFile) )
-				throw new SSHAuthenticationException("Private key file not found.");
-			if( !is_readable($privateKeyFile) )
-				throw new SSHAuthenticationException("Private key file is not readable.");
-			if( !is_file($publicKeyFile) )
-				throw new SSHAuthenticationException("Public key file not found.");
-			if( !is_readable($publicKeyFile) )
-				throw new SSHAuthenticationException("Public key file is not readable.");
-
-			if( $expectedFingerprint !== null ) {
-				$fingerprint = $this->getFingerprint();
-				if( strtoupper($expectedFingerprint) !== $fingerprint )
-					throw new SSHAuthenticationException("Authentication is not safe since SSH fingerprint ({$fingerprint}) differs from the one expected.");
+			if( !is_file($privateKeyFile) ) {
+				$msg = "Cannot authenticate since specified private key file is not found";
+				if( $this->logCommands )
+					$this->log[] = $msg;
+				throw new SSHAuthenticationException($msg, SSHAuthenticationException::REASON_NO_PRIVATE_KEY_FILE);
 			}
+			if( !is_readable($privateKeyFile) ) {
+				$msg = "Cannot authenticate since specified private key file is not readable";
+				if( $this->logCommands )
+					$this->log[] = $msg;
+				throw new SSHAuthenticationException($msg, SSHAuthenticationException::REASON_PRIVATE_KEY_FILE_NOT_READABLE);
+			}
+			if( !is_file($publicKeyFile) ) {
+				$msg = "Cannot authenticate since specified public key file is not found";
+				if( $this->logCommands )
+					$this->log[] = $msg;
+				throw new SSHAuthenticationException($msg, SSHAuthenticationException::REASON_NO_PUBLIC_KEY_FILE);
+			}
+			if( !is_readable($publicKeyFile) ) {
+				$msg = "Cannot authenticate since specified public key file is not readable";
+				if( $this->logCommands )
+					$this->log[] = $msg;
+				throw new SSHAuthenticationException($msg, SSHAuthenticationException::REASON_PUBLIC_KEY_FILE_NOT_READABLE);
+			}
+			$this->checkFingerprint($expectedFingerprint);
+			if( $this->logCommands )
+				$this->log[] = "Login: {$user}";
 			$result = ssh2_auth_pubkey_file($this->session, $user, $publicKeyFile, $privateKeyFile, $passPhrase);
-			if( !$result )
-				throw new SSHAuthenticationException("Authentication failed");
+			if( !$result ) {
+				$msg = "Authentication failed";
+				if( $this->logCommands )
+					$this->log[] = $msg;
+				throw new SSHAuthenticationException($msg, SSHAuthenticationException::REASON_AUTHENTICATION_FAILED);
+			}
+			if( $this->logCommands )
+				$this->log[] = "Successfully authenticated";
 			$this->authenticated = true;
 			$this->user = $user;
 		}
@@ -133,16 +177,18 @@ class SSHSession {
 	 */
 	public function authenticateUsingPassword($user, $password, $expectedFingerprint = null) {
 		if( !$this->session )
-			throw new SSHConnectionException("SSH session is not open.");
+			throw new SSHConnectionException("SSH session is not open.", SSHConnectionException::REASON_NOT_CONNECTED);
 		if( !$this->authenticated ) {
-			if( $expectedFingerprint !== null ) {
-				$fingerprint = $this->getFingerprint();
-				if( strtoupper($expectedFingerprint) !== $fingerprint )
-					throw new SSHAuthenticationException("Authentication is not safe since SSH fingerprint ({$fingerprint}) differs from the one expected.");
-			}
+			$this->checkFingerprint($expectedFingerprint);
 			$result = ssh2_auth_password($this->session, $user, $password);
-			if( !$result )
-				throw new SSHAuthenticationException("Authentication failed");
+			if( !$result ) {
+				$msg = "Authentication failed";
+				if( $this->logCommands )
+					$this->log[] = $msg;
+				throw new SSHAuthenticationException($msg, SSHAuthenticationException::REASON_AUTHENTICATION_FAILED);
+			}
+			if( $this->logCommands )
+				$this->log[] = "Successfully authenticated";
 			$this->authenticated = true;
 			$this->user = $user;
 		}
@@ -161,14 +207,14 @@ class SSHSession {
 	 */
 	public function exec($command, &$exitStatus = 0, &$stdOut = "", &$stdErr = "") {
 		if( !$this->session )
-			throw new SSHConnectionException("SSH session is not open");
+			throw new SSHConnectionException("SSH session is not open", SSHConnectionException::REASON_NOT_CONNECTED);
 		if( !$this->authenticated )
-			throw new SSHAuthenticationException("SSH session is not authenticated");
+			throw new SSHAuthenticationException("SSH session is not authenticated", SSHAuthenticationException::REASON_NOT_AUTHENTICATED);
 		$suffix = ($command != "exit") ? ";echo -en \"\\n~SSHExecExitStatus=\$?~\"" : "";
 		if( $this->logCommands && $command != "exit" )
 			$this->log[] = "{$this->user}@{$this->host}# {$command}";
 		if (!($stdOutStream = ssh2_exec($this->session, $command . $suffix)))
-			throw new SSHExecException('SSH exec failed');
+			throw new SSHExecException('SSH exec failed', SSHExecException::REASON_EXEC_FAILED);
 		$stdErrStream = ssh2_fetch_stream($stdOutStream, SSH2_STREAM_STDERR);
 		stream_set_blocking($stdOutStream, true);
 		stream_set_blocking($stdErrStream, true);
@@ -184,14 +230,14 @@ class SSHSession {
 		}
 		else {
 			if( ! preg_match( "/^(.*)\n~SSHExecExitStatus=([^~]*)~$/s", $stdOutCombined, $matches ) )
-				throw new SSHExecException("Could not get command exit status");
+				throw new SSHExecException("Could not get command exit status", SSHExecException::REASON_BAD_EXIT_STATUS_FORMAT);
 			$stdOut = $matches[1];
 			$exitStatus = intval($matches[2]);
 			if( $this->logConsole ) {
-				if( $stdErr !== $stdOut )
+				if( $stdOut !== "" )
 					$this->log[] = $stdOut;
-				if( $stdErr !== "" )
-					$this->log[] = $stdErr;
+				if( $stdErrText !== "" )
+					$this->log[] = $stdErrText;
 				if( $exitStatus )
 					$this->log[] = "NON-ZERO EXIT STATUS: {$exitStatus}";
 			}
@@ -227,13 +273,13 @@ class SSHSession {
 	 */
 	public function upload($localFile, $remoteFile, $chmod = 0644) {
 		if( !$this->session )
-			throw new SSHConnectionException("SSH session is not open");
+			throw new SSHConnectionException("SSH session is not open", SSHConnectionException::REASON_NOT_CONNECTED);
 		if( !$this->authenticated )
-			throw new SSHAuthenticationException("SSH session is not authenticated");
+			throw new SSHAuthenticationException("SSH session is not authenticated", SSHAuthenticationException::REASON_NOT_AUTHENTICATED);
 		if( !ssh2_scp_send($this->session, $localFile, $remoteFile, $chmod) ) {
 			if( $this->logFileTransfers )
 				$this->log[] = "Failed to upload {$localFile} to {$remoteFile}";
-			throw new SSHFileTransferException("Failed to upload file on remote host");
+			throw new SSHFileTransferException("Failed to upload file on remote host", SSHFileTransferException::REASON_TRANSFER_FAILED);
 		}
 		else if( $this->logFileTransfers )
 			$this->log[] = "Uploaded {$localFile} to {$remoteFile}";
@@ -250,13 +296,13 @@ class SSHSession {
 	 */
 	public function download($remoteFile, $localFile) {
 		if( !$this->session )
-			throw new SSHConnectionException("SSH session is not open");
+			throw new SSHConnectionException("SSH session is not open", SSHConnectionException::REASON_NOT_CONNECTED);
 		if( !$this->authenticated )
-			throw new SSHAuthenticationException("SSH session is not authenticated");
+			throw new SSHAuthenticationException("SSH session is not authenticated", SSHAuthenticationException::REASON_NOT_AUTHENTICATED);
 		if( !ssh2_scp_recv($this->session, $remoteFile, $localFile) ) {
 			if( $this->logFileTransfers )
 				$this->log[] = "Failed to download {$remoteFile} to {$localFile}";
-			throw new SSHFileTransferException("Failed to download file from remote host");
+			throw new SSHFileTransferException("Failed to download file from remote host", SSHFileTransferException::REASON_TRANSFER_FAILED);
 		}
 		else if( $this->logFileTransfers )
 			$this->log[] = "Downloaded {$remoteFile} to {$localFile}";
@@ -274,14 +320,14 @@ class SSHSession {
 	 */
 	public function uploadString($content, $remoteFile, $chmod = 0644) {
 		if( !$this->session )
-			throw new SSHConnectionException("SSH session is not open");
+			throw new SSHConnectionException("SSH session is not open", SSHConnectionException::REASON_NOT_CONNECTED);
 		if( !$this->authenticated )
-			throw new SSHAuthenticationException("SSH session is not authenticated");
+			throw new SSHAuthenticationException("SSH session is not authenticated", SSHAuthenticationException::REASON_NOT_AUTHENTICATED);
 		$fp = tmpfile();
 		if( $fp === false ) {
 			if( $this->logFileTransfers )
 				$this->log[] = "Failed to create temporary file for uploading {$remoteFile} content";
-			throw new SSHFileTransferException("Failed to create temporary file for sending to remote host");
+			throw new SSHFileTransferException("Failed to create temporary file for sending to remote host", SSHFileTransferException::REASON_CANNOT_CREATE_TEMPORARY_FILE);
 		}
 		$meta = stream_get_meta_data($fp);
 		fwrite($fp, $content);
@@ -293,7 +339,7 @@ class SSHSession {
 		catch(SSHFileTransferException $ex) {
 			if( $log )
 				$this->log[] = "Failed to upload content to {$remoteFile}";
-			throw new SSHFileTransferException("Failed to upload content to a remote file", 0, $ex);
+			throw new SSHFileTransferException("Failed to upload content to a remote file", $ex->getCode(), $ex);
 		}
 		finally {
 			$this->logFileTransfers = $log;
@@ -314,14 +360,14 @@ class SSHSession {
 	 */
 	public function downloadString($remoteFile, &$content) {
 		if( !$this->session )
-			throw new SSHConnectionException("SSH session is not open");
+			throw new SSHConnectionException("SSH session is not open", SSHConnectionException::REASON_NOT_CONNECTED);
 		if( !$this->authenticated )
-			throw new SSHAuthenticationException("SSH session is not authenticated");
+			throw new SSHAuthenticationException("SSH session is not authenticated", SSHAuthenticationException::REASON_NOT_AUTHENTICATED);
 		$tmpName = tempnam(sys_get_temp_dir(), "PHLSSDS");
 		if( $tmpName === false ) {
 			if( $this->logFileTransfers )
 				$this->log[] = "Failed to create temporary file for downloading {$remoteFile} content";
-			throw new SSHFileTransferException("Failed to create temporary file for receiving from remote host");
+			throw new SSHFileTransferException("Failed to create temporary file for receiving from remote host", SSHFileTransferException::REASON_CANNOT_CREATE_TEMPORARY_FILE);
 		}
 		$log = $this->logFileTransfers;
 		$this->logFileTransfers = false;
@@ -332,7 +378,7 @@ class SSHSession {
 		catch(SSHFileTransferException $ex) {
 			if( $log )
 				$this->log[] = "Failed to download content of {$remoteFile}";
-			throw new SSHFileTransferException("Failed to download content of a remote file", 0, $ex);
+			throw new SSHFileTransferException("Failed to download content of a remote file", $ex->getCode(), $ex);
 		}
 		finally {
 			$this->logFileTransfers = $log;

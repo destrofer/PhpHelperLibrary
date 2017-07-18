@@ -20,5 +20,8 @@
         "psr-4": {
             "Destrofer\\": "namespaces\\Destrofer"
         }
+    },
+    "archive": {
+        "exclude": ["/tests"]
     }
 }

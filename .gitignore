@@ -1,4 +1,3 @@
 /.idea
 /nbproject
-/tests/ssh/id_rsa*
 php_errors.log

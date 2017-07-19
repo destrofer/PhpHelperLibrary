@@ -211,7 +211,7 @@ class SSHSession {
 		if( !$this->authenticated )
 			throw new SSHAuthenticationException("SSH session is not authenticated", SSHAuthenticationException::REASON_NOT_AUTHENTICATED);
 		$suffix = ($command != "exit") ? ";echo -en \"\\n~SSHExecExitStatus=\$?~\"" : "";
-		if( $this->logCommands && $command != "exit" )
+		if( $this->logCommands )
 			$this->log[] = "{$this->user}@{$this->host}# {$command}";
 		if (!($stdOutStream = ssh2_exec($this->session, $command . $suffix)))
 			throw new SSHExecException('SSH exec failed', SSHExecException::REASON_EXEC_FAILED);
@@ -223,9 +223,9 @@ class SSHSession {
 		fclose($stdErrStream);
 		fclose($stdOutStream);
 		if( $command == "exit" ) {
-			$this->session = null;
-			$this->authenticated = false;
 			$stdOut = $stdOutCombined;
+			if( $this->logConsole && $stdOut !== "" )
+				$this->log[] = $stdOut;
 			$exitStatus = ($stdErrText === "") ? 0 : 1;
 		}
 		else {
@@ -257,7 +257,10 @@ class SSHSession {
 	 * @throws SSHExecException
 	 */
 	public function disconnect() {
-		return $this->exec("exit");
+		$this->exec("exit");
+		$this->session = null;
+		$this->authenticated = false;
+		return $this;
 	}
 
 	/**

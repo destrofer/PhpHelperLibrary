@@ -20,6 +20,7 @@ class Downloader {
 	private static $active = null;
 	private static $lastErrorCode = CURLM_OK;
 	private static $nextDownloadId = 1;
+	private static $currentHeaderCallbackData = null;
 
 	/**
 	 * Sets CURLMOPT_MAXCONNECTS multi-cURL option.
@@ -88,7 +89,7 @@ class Downloader {
 						self::$activeDownloads[$cid]['http_code'] = curl_getinfo($result['handle'], CURLINFO_HTTP_CODE);
 						self::$activeDownloads[$cid]['last_url'] = curl_getinfo($result['handle'], CURLINFO_EFFECTIVE_URL);
 
-						if( $result['result'] != CURLE_OK ) {
+						if( !self::$activeDownloads[$cid]['canceled'] && $result['result'] != CURLE_OK ) {
 							self::$activeDownloads[$cid]['error_code'] = $result['result'];
 							self::$activeDownloads[$cid]['error'] = curl_error($result['handle']);
 						}
@@ -133,6 +134,7 @@ class Downloader {
 	 *  - **proxy** {@see \Destrofer\Web\Proxy} (optional) Instance of the Proxy class to use for connection. Defaults to NULL.
 	 *  - **headers** `array` (optional) An associative array of additional HTTP request headers to be sent. Key of array element is the header name. First request line also may be modified if array contains an element with the empty string key.
 	 *  - **curlOptions** `array` (optional) An associative array to be passed to {@see curl_setopt_array()} function before starting the download.
+	 *  - **onHeaderReady** `function($id, array $header): void` (optional) A callback function that is called when HTTP header is fully received. Call {@see Downloader::cancelDownload()} method with id passed in the first argument to abort request without receiving body. If request is aborted from within this callback it is not removed from the queue, but in the end the {@see Downloader::endDownload()} method returns a result that has "canceled" field set to TRUE.
 	 *
 	 * @param array $options An associative array of download options.
 	 * @return false|int Returns ID of the download in the queue or FALSE in case of an error.
@@ -176,6 +178,7 @@ class Downloader {
 		$ch = curl_init();
 
 		$downloadResult = [
+			'id' => self::$nextDownloadId++,
 			'handle' => $ch,
 			'shd' => $headers,
 			'request' => '',
@@ -184,6 +187,8 @@ class Downloader {
 			'http_code' => null,
 			'last_url' => $url,
 			'done' => false,
+			'canceled' => false,
+			'header_ready_callback' => (isset($options["onHeaderReady"]) && is_callable($options["onHeaderReady"])) ? $options["onHeaderReady"] : null,
 		];
 
 		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verify ? 2 : 0);
@@ -203,6 +208,14 @@ class Downloader {
 					$downloadResult['header'][strtoupper($head[0])] = ltrim($head[1]);
 				else
 					$downloadResult['header'][null] = $head[0];
+			}
+			else if( $downloadResult["header_ready_callback"] ) {
+				self::$currentHeaderCallbackData = &$downloadResult;
+				call_user_func($downloadResult["header_ready_callback"], $downloadResult["id"], $downloadResult["header"]);
+				$null = null;
+				self::$currentHeaderCallbackData = &$null;
+				if( $downloadResult["canceled"] )
+					return -1;
 			}
 			return strlen($header);
 		});
@@ -242,9 +255,9 @@ class Downloader {
 		self::$lastErrorCode = curl_multi_add_handle(self::$handle, $ch);
 		if( self::$lastErrorCode == CURLM_OK ) {
 			self::doLoop();
-			self::$activeDownloads[self::$nextDownloadId] = &$downloadResult;
-			self::$activeDownloadsIndex[(string)$ch] = self::$nextDownloadId;
-			return self::$nextDownloadId++;
+			self::$activeDownloads[$downloadResult["id"]] = &$downloadResult;
+			self::$activeDownloadsIndex[(string)$ch] = $downloadResult["id"];
+			return $downloadResult["id"];
 		}
 		curl_close($ch);
 		return false;
@@ -358,6 +371,7 @@ class Downloader {
 	 * - **body** `string|bool` Body of the response or the request result. It will contain TRUE or FALSE only if `outputFile` option was not NULL or CURLOPT_RETURNTRANSFER option was overriden with value of 0.
 	 * - **http_code** `int` HTTP response code.
 	 * - **last_url** `string` Last effective URL that the response body belongs to. It may differ from the URL that was given in options in case if there were any redirects followed.
+	 * - **canceled** `bool` Will be set to TRUE if request is canceled from within onHeaderReady callback.
 	 * - **error_code** `int` (optional) cURL error code in case if there was an error (not CURLE_OK). See {@see curl_errno()}.
 	 * - **error** `string` (optional) cURL error as text returned by {@see curl_error()}.
 	 *
@@ -375,7 +389,7 @@ class Downloader {
 			return null;
 		$data = &self::$activeDownloads[$id];
 		curl_multi_remove_handle(self::$handle, $data['handle']);
-		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle'], $data['done']);
+		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle'], $data['done'], $data['header_ready_callback']);
 		return $data;
 	}
 
@@ -400,7 +414,7 @@ class Downloader {
 			return null;
 		$data = &self::$activeDownloads[$id];
 		curl_multi_remove_handle(self::$handle, $data['handle']);
-		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle'], $data['done']);
+		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle'], $data['done'], $data['header_ready_callback']);
 		return $data;
 	}
 
@@ -412,9 +426,13 @@ class Downloader {
 	public static function cancelDownload($id) {
 		if( !self::$handle || !isset(self::$activeDownloads[$id]) )
 			return;
+		if( self::$currentHeaderCallbackData && self::$currentHeaderCallbackData["id"] == $id ) {
+			self::$currentHeaderCallbackData["canceled"] = true;
+			return;
+		}
 		$data = self::$activeDownloads[$id];
 		curl_multi_remove_handle(self::$handle, $data['handle']);
-		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle']);
+		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']]);
 	}
 
 	/**

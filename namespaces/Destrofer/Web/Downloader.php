@@ -152,8 +152,11 @@ class Downloader {
 		$proxy = isset($options['proxy']) ? $options['proxy'] : null;
 
 		$uinf = parse_url($url);
+		if( !$uinf || !isset($uinf["host"]) )
+			return false;
+		
 		$host = $uinf["host"];
-		$path = $uinf["path"];
+		$path = isset($uinf["path"]) ? $uinf["path"] : "";
 		$path .= (isset($uinf['query']) && $uinf['query']) ? ('?'.$uinf['query']) : '';
 
 		if( $outputFile ) {

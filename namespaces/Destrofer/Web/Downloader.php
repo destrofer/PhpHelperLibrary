@@ -133,6 +133,7 @@ class Downloader {
 	 *  - **timeout** `float` (optional) Number of seconds before download operation is considered timed out and fails.
 	 *  - **proxy** {@see \Destrofer\Web\Proxy} (optional) Instance of the Proxy class to use for connection. Defaults to NULL.
 	 *  - **headers** `array` (optional) An associative array of additional HTTP request headers to be sent. Key of array element is the header name. First request line also may be modified if array contains an element with the empty string key.
+	 *  - **noBody** `bool` (optional) Do not receive body. Defaults to FALSE on all request types except HEAD.
 	 *  - **curlOptions** `array` (optional) An associative array to be passed to {@see curl_setopt_array()} function before starting the download.
 	 *  - **onHeaderReady** `function($id, array $header): void` (optional) A callback function that is called when HTTP header is fully received. Call {@see Downloader::cancelDownload()} method with id passed in the first argument to abort request without receiving body. If request is aborted from within this callback it is not removed from the queue, but in the end the {@see Downloader::endDownload()} method returns a result that has "canceled" field set to TRUE.
 	 *
@@ -233,6 +234,8 @@ class Downloader {
 		curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, ($maxRedirs > 0) ? 1 : 0);
 		curl_setopt($ch, CURLOPT_MAXREDIRS, $maxRedirs);
+		if( $type == "HEAD" || (isset($options["noBody"]) && $options["noBody"]) )
+			curl_setopt($ch, CURLOPT_NOBODY, true);
 
 		if( $postData ) {
 			curl_setopt($ch, CURLOPT_POST, 1);

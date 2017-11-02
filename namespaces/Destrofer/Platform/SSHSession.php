@@ -37,10 +37,11 @@ class SSHSession {
 	 * Constructor will call connect() method automatically if host parameter is not NULL.
 	 *
 	 * @param string|null $host (optional) Remote host to connect to. Must be either NULL or in format "host" or "host:port". Defaults to NULL.
+	 * @param int Timeout in seconds for trying to connect. If NULL then default_socket_timeout value will be used from php.ini. Ignored if $host parameter is NULL. Defaults to NULL.
 	 * @throws \RuntimeException
 	 * @throws SSHConnectionException
 	 */
-	public function __construct($host = null) {
+	public function __construct($host = null, $timeout = null) {
 		if( !extension_loaded("ssh2") )
 			throw new \RuntimeException("SSH2 extension is required to use " . __CLASS__ . " class.");
 		if( $host !== null )
@@ -51,21 +52,31 @@ class SSHSession {
 	 * Connects to a remote host.
 	 *
 	 * @param string $host Remote host to connect to. Must be in format either "host" or "host:port".
+	 * @param int Timeout in seconds. If NULL then default_socket_timeout value will be used from php.ini. Defaults to NULL.
 	 * @return $this
 	 * @throws SSHConnectionException
 	 */
-	public function connect($host) {
+	public function connect($host, $timeout = null) {
 		$this->host = $host;
 		$this->authenticated = false;
 
 		$info = explode(":", $host, 2);
 
+		$originalTimeout = null;
+		if( $timeout !== null ) {
+			$originalTimeout = ini_get('default_socket_timeout');
+			ini_set('default_socket_timeout', $timeout);
+		}
+		
 		// This condition is required since ssh2_connect tries to connect to port 0 when second argument is present and equals to NULL.
 		if( !empty($info[1]) )
-			$this->session = ssh2_connect($info[0], $info[1]);
+			$this->session = @ssh2_connect($info[0], $info[1]);
 		else
-			$this->session = ssh2_connect($info[0]);
+			$this->session = @ssh2_connect($info[0]);
 
+		if( $originalTimeout !== null )
+			ini_set('default_socket_timeout', $originalTimeout);
+		
 		if( !$this->session ) {
 			if( $this->logCommands )
 				$this->log[] = "Failed to connect to {$host}";

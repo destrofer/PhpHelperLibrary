@@ -15,6 +15,12 @@ class ProfilingBlock {
 	public $indent = 0;
 	/** @var float */
 	public $time;
+	/** @var int */
+	public $memory;
+	/** @var int */
+	public $memoryDelta = 0;
+	/** @var int */
+	public $peakMemory = 0;
 	/** @var float|null */
 	public $duration;
 	/** @var string */
@@ -32,6 +38,7 @@ class ProfilingBlock {
 	 * @param null|float $duration
 	 */
 	public function __construct($name = null, $indent = 0, $time = 0.0, $duration = null) {
+		$this->memory = memory_get_usage(true);
 		$this->name = (($name === null) ? ("block " . (self::$nextIndex++)) : $name);
 		$this->indent = $indent;
 		$this->time = $time;
@@ -46,7 +53,14 @@ class ProfilingBlock {
 	public function output(&$lines, $startTime, $outputTime) {
 		$duration = ($this->duration === null) ? ($outputTime - $this->time) . " *" : $this->duration;
 		$text = $this->name . ($this->comment ? " [{$this->comment}]" : "");
-		$lines[] = sprintf("%-20s %-20s   %s", sprintf("%0.9f", $this->time - $startTime), sprintf("%0.9f", $duration), str_repeat(" ", max(0, $this->indent)) . $text);
+		$lines[] = sprintf(
+			"%-20s %-20s %-20s %-20s   %s",
+			sprintf("%0.9f", $this->time - $startTime),
+			sprintf("%0.9f", $duration),
+			number_format($this->peakMemory, 0, "", " "),
+			number_format($this->memoryDelta, 0, "", " "),
+			str_repeat(" ", max(0, $this->indent)) . $text
+		);
 		foreach( $this->children as $child )
 			$child->output($lines, $startTime, $outputTime);
 	}

@@ -89,6 +89,8 @@ class Profiler {
 		$block = array_pop(self::$blockStack);
 		$block->duration = $time - $block->time;
 		$block->comment = $appendComment;
+		$block->memoryDelta = memory_get_usage(true) - $block->memory;
+		$block->peakMemory = memory_get_peak_usage(true);
 		return $block;
 	}
 
@@ -100,14 +102,14 @@ class Profiler {
 		$lines = [];
 		if( !empty(self::$checkpoints) ) {
 			$lines[] = "CHECKPOINTS";
-			$lines[] = sprintf("%-20s %-20s   %s", "SINCE BEGINNING", "SINCE PREV CP", "CHECKPOINT NAME");
+			$lines[] = sprintf("%-20s %-20s %-20s %-20s   %s", "SINCE BEGINNING", "SINCE PREV CP", "PEAK MEM", "MEM", "CHECKPOINT NAME");
 			foreach( self::$checkpoints as $checkpoint )
 				$checkpoint->output($lines, self::$startTime);
 			$lines[] = "";
 		}
 		if( !empty(self::$rootBlocks) ) {
 			$lines[] = "BLOCKS";
-			$lines[] = sprintf("%-20s %-20s   %s", "START", "DURATION", "BLOCK NAME");
+			$lines[] = sprintf("%-20s %-20s %-20s %-20s   %s", "START", "DURATION", "PEAK MEM", "MEM DELTA", "BLOCK NAME");
 			foreach(self::$rootBlocks as $block )
 				$block->output($lines, self::$startTime, $outputTime);
 			$lines[] = "";

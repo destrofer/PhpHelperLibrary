@@ -17,6 +17,10 @@ class ProfilingCheckpoint {
 	public $time;
 	/** @var float */
 	public $delta;
+	/** @var int */
+	public $memory;
+	/** @var int */
+	public $peakMemory;
 
 	/** @var int */
 	public static $nextIndex = 1;
@@ -32,6 +36,8 @@ class ProfilingCheckpoint {
 		$this->indent = $indent;
 		$this->time = $time;
 		$this->delta = $delta;
+		$this->memory = memory_get_usage(true);
+		$this->peakMemory = memory_get_peak_usage(true);
 	}
 
 	/**
@@ -39,6 +45,13 @@ class ProfilingCheckpoint {
 	 * @param float $startTime
 	 */
 	public function output(&$lines, $startTime) {
-		$lines[] = sprintf("%-20s %-20s   %s", sprintf("%0.9f", $this->time - $startTime), sprintf("%0.9f", $this->delta), str_repeat(" ", max(0, $this->indent)) . $this->name);
+		$lines[] = sprintf(
+			"%-20s %-20s   %s",
+			sprintf("%0.9f", $this->time - $startTime),
+			sprintf("%0.9f", $this->delta),
+			number_format($this->peakMemory, 0, "", " "),
+			number_format($this->memory, 0, "", " "),
+			str_repeat(" ", max(0, $this->indent)) . $this->name
+		);
 	}
 }

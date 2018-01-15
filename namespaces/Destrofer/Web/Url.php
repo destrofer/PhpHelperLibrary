@@ -78,7 +78,7 @@ class Url {
 		$=isux", $url, $mtc) ) {
 			$user = null;
 			$pass = null;
-			if( $mtc[2] ) {
+			if( isset($mtc[2]) && $mtc[2] ) {
 				$pos = strpos($mtc[2], ":");
 				if( $pos === false )
 					$user = substr($mtc[2], 0, -1);

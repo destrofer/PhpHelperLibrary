@@ -40,7 +40,7 @@ class Url {
 				$this->pathIsLocal = true;
 			}
 			else {
-				$parsedData = parse_url($url);
+				$parsedData = self::parse_url($url);
 				if( !is_array($parsedData) )
 					throw new Exception($url, "Cannot parse the given URL");
 				foreach( $parsedData as $k => $v ) {
@@ -66,7 +66,64 @@ class Url {
 			}
 		}
 	}
-	
+
+	public static function parse_url($url, $component = -1) {
+		if( preg_match("=^
+			(?:([a-z0-9]*:)//|//)? # scheme
+			([^@:]+(?::[^@]*)?@)? # user:pass
+			(?:([\\p{L}0-9](?:[\\p{L}0-9\\-]*[\\p{L}0-9])?(?:\\.[\\p{L}0-9](?:[\\p{L}0-9\\-]*[\\p{L}0-9])?)*)(?::([0-9]+))?)? # host:port
+			(/[^\\?\\#]*)? # path
+			(\\?[^\\#]*)? # query
+			(\\#.*)? # fragment
+		$=isux", $url, $mtc) ) {
+			$user = null;
+			$pass = null;
+			if( $mtc[2] ) {
+				$pos = strpos($mtc[2], ":");
+				if( $pos === false )
+					$user = substr($mtc[2], 0, -1);
+				else {
+					$user = substr($mtc[2], 0, $pos);
+					$pass = substr($mtc[2], $pos + 1, -1);
+				}
+			}
+			$info = array();
+			if( isset($mtc[1]) && $mtc[1] !== "" )
+				$info["scheme"] = substr($mtc[1], 0, -1);
+			if( isset($mtc[3]) && $mtc[3] !== "" )
+				$info["host"] = $mtc[3];
+			if( isset($mtc[4]) && $mtc[4] !== "" )
+				$info["port"] = (int)$mtc[4];
+			if( $user !== null )
+				$info["user"] = $user;
+			if( $pass !== null )
+				$info["pass"] = $pass;
+			if( isset($mtc[5]) && $mtc[5] !== "" )
+				$info["path"] = $mtc[5];
+			if( isset($mtc[6]) && $mtc[6] !== "" )
+				$info["query"] = substr($mtc[6], 1);
+			if( isset($mtc[7]) && $mtc[7] !== "" )
+				$info["fragment"] = substr($mtc[7], 1);
+			if( !empty($info) ) {
+				if( $component !== -1 ) {
+					switch( $component ) {
+						case PHP_URL_SCHEME: return isset($info["scheme"]) ? $info["scheme"] : null;
+						case PHP_URL_HOST: return isset($info["host"]) ? $info["host"] : null;
+						case PHP_URL_PORT: return isset($info["port"]) ? $info["port"] : null;
+						case PHP_URL_USER: return isset($info["user"]) ? $info["user"] : null;
+						case PHP_URL_PASS: return isset($info["pass"]) ? $info["pass"] : null;
+						case PHP_URL_PATH: return isset($info["path"]) ? $info["path"] : null;
+						case PHP_URL_QUERY: return isset($info["query"]) ? $info["query"] : null;
+						case PHP_URL_FRAGMENT: return isset($info["fragment"]) ? $info["fragment"] : null;
+					}
+					return null;
+				}
+				return $info;
+			}
+		}
+		return false;
+	}
+
 	public function getPort() {
 		return $this->port;
 	}

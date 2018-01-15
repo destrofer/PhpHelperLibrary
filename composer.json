@@ -12,7 +12,8 @@
         }
     ],
     "require": {
-        "php": ">=5.5.0"
+        "php": ">=5.5.0",
+        "true/punycode": "~2.0"
     },
     "require-dev": {
     },

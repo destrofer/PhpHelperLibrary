@@ -10,6 +10,7 @@ namespace Destrofer\Web;
 
 use \Exception;
 use Destrofer\Web\Proxy;
+use TrueBV\Punycode;
 
 class Downloader {
 	private static $registeredShutdown = false;
@@ -152,11 +153,12 @@ class Downloader {
 		/** @var Proxy $proxy */
 		$proxy = isset($options['proxy']) ? $options['proxy'] : null;
 
-		$uinf = parse_url($url);
+		$uinf = Url::parse_url($url);
 		if( !$uinf || !isset($uinf["host"]) )
 			return false;
 		
-		$host = $uinf["host"];
+		$hostEncoder = new Punycode();
+		$host = $hostEncoder->encode($uinf["host"]);
 		$path = isset($uinf["path"]) ? $uinf["path"] : "";
 		$path .= (isset($uinf['query']) && $uinf['query']) ? ('?'.$uinf['query']) : '';
 

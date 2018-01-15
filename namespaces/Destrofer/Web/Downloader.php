@@ -153,14 +153,26 @@ class Downloader {
 		/** @var Proxy $proxy */
 		$proxy = isset($options['proxy']) ? $options['proxy'] : null;
 
-		$uinf = Url::parse_url($url);
+		$uinf = Url::parse_url(($url instanceof Url) ? $url->getAbsoluteUrl() : $url);
 		if( !$uinf || !isset($uinf["host"]) )
 			return false;
-		
+
 		$hostEncoder = new Punycode();
 		$host = $hostEncoder->encode($uinf["host"]);
 		$path = isset($uinf["path"]) ? $uinf["path"] : "";
 		$path .= (isset($uinf['query']) && $uinf['query']) ? ('?'.$uinf['query']) : '';
+
+		$absoluteUrl = (isset($uinf["scheme"]) ? $uinf["scheme"] : "http") . "://";
+		if( isset($uinf["user"]) ) {
+			$absoluteUrl .= $uinf["user"];
+			if( isset($uinf["pass"]) )
+				$absoluteUrl .= ":" . $uinf["pass"];
+			$absoluteUrl .= "@";
+		}
+		$absoluteUrl .= $host;
+		if( isset($uinf["port"]) )
+			$absoluteUrl .= ":" . $uinf["port"];
+		$absoluteUrl .= $path;
 
 		if( $outputFile ) {
 			$fl = fopen( $outputFile, "w+" );
@@ -191,7 +203,7 @@ class Downloader {
 			'header' => [],
 			'body' => null,
 			'http_code' => null,
-			'last_url' => $url,
+			'last_url' => $absoluteUrl,
 			'done' => false,
 			'canceled' => false,
 			'header_ready_callback' => (isset($options["onHeaderReady"]) && is_callable($options["onHeaderReady"])) ? $options["onHeaderReady"] : null,
@@ -200,7 +212,7 @@ class Downloader {
 		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verify ? 2 : 0);
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verify ? 1 : 0);
 
-		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_URL, $absoluteUrl);
 		if( $outputFile )
 			curl_setopt($ch, CURLOPT_FILE, $fl);
 		else

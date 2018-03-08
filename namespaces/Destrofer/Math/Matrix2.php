@@ -15,7 +15,7 @@ class Matrix2 {
 	/**
 	 * @param Matrix2|Matrix3|Matrix4|float[][]|string $m
 	 */
-	public function __construct($m) {
+	public function __construct($m = null) {
 		if( $m instanceof Matrix2 )
 			$this->m = $m->m;
 		else if( $m instanceof Matrix3 || $m instanceof Matrix4)

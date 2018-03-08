@@ -72,7 +72,7 @@ class Url {
 			([a-z0-9]+:)? # scheme
 			(?://
 				([^@:]+(?::[^@]*)?@)? # user:pass
-				(?:([\\p{L}0-9](?:[\\p{L}0-9\\-]*[\\p{L}0-9])?(?:\\.[\\p{L}0-9](?:[\\p{L}0-9\\-]*[\\p{L}0-9])?)*)(?::([0-9]+))?)? # host:port
+				(?:([\\p{L}0-9](?:[\\p{L}0-9\\-]*[\\p{L}0-9])?(?:\\.[\\p{L}0-9](?:[\\p{L}0-9\\-]*[\\p{L}0-9])?)*)(?::([0-9]{1,5}))?)? # host:port
 			)?
 			([^\\?\\#]*)? # path
 			(\\?[^\\#]*)? # query
@@ -94,8 +94,11 @@ class Url {
 				$info["scheme"] = substr($mtc[1], 0, -1);
 			if( isset($mtc[3]) && $mtc[3] !== "" )
 				$info["host"] = $mtc[3];
-			if( isset($mtc[4]) && $mtc[4] !== "" )
+			if( isset($mtc[4]) && $mtc[4] !== "" ) {
 				$info["port"] = (int)$mtc[4];
+				if( $info["port"] < 1 || $info["port"] > 65535 )
+					return false;
+			}
 			if( $user !== null )
 				$info["user"] = $user;
 			if( $pass !== null )

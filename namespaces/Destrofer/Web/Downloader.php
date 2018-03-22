@@ -8,6 +8,7 @@
 
 namespace Destrofer\Web;
 
+use Destrofer\Platform\Promise;
 use \Exception;
 use TrueBV\Punycode;
 
@@ -474,5 +475,55 @@ class Downloader {
 		if( !$id )
 			return false;
 		return self::endDownload($id);
+	}
+
+	/**
+	 * Creates a promise that can be used to download data asynchronously.
+	 *
+	 * Promise will be resolved if {@see endDownload()} method gives a usable result (even if HTTP response status code
+	 * is other than 200 OK).
+	 *
+	 * In case of an error the promise will be rejected with error string.
+	 *
+	 * Usage example:
+	 * ```
+	 * $p = Downloader::promise(["url" => "http://example.com"])->then(function($result) {
+	 *     echo ($result["http_code"] == 200) ? htmlspecialchars($result["body"]) : ("HTTP error: " . $result["http_code"]);
+	 * })->_catch(function($error) {
+	 *     echo "Download error: {$error}";
+	 * });
+	 * ...
+	 * $p->await();
+	 * ```
+	 *
+	 * @param array $options An associative array of download options.
+	 * @return Promise
+	 * @see beginDownload() for options array structure.
+	 * @see endDownload() for associative array structure passed to fulfilled promise handler.
+	 */
+	public static function promise($options) {
+		return new Promise(function($resolve, $reject) use(&$options) {
+			$id = Downloader::beginDownload($options);
+			if( $id === false ) {
+				$reject(Downloader::getLastError());
+				return;
+			}
+			yield;
+			while(true) {
+				$result = Downloader::endDownload($id, 0);
+				if( $result === false ) {
+					$reject(Downloader::getLastError());
+					break;
+				}
+				if( $result !== null ) {
+					if( isset($result["error_code"]) && $result["error_code"] )
+						$reject($result["error"]);
+					else
+						$resolve($result);
+					break;
+				}
+				yield;
+			}
+		});
 	}
 }

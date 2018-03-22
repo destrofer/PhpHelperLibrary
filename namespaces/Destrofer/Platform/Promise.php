@@ -257,7 +257,7 @@ class Promise {
 	 * @param Promise[] $promises
 	 * @return Promise[]
 	 */
-	private static function doLoopCycle($promises) {
+	private static function doLoopCycle(&$promises) {
 		$finishedPromises = [];
 		foreach( $promises as $key => $promise ) {
 			if( $promise->awaitLoopTick() )
@@ -301,10 +301,19 @@ class Promise {
 
 	/**
 	 * Waits till all currently active promises finish execution.
+	 *
+	 * @param bool $ignoreExceptions Set to TRUE to ignore all exceptions that happen during the waiting cycle.
+	 * @throws \Exception
 	 */
-	public static function awaitAllActivePromises() {
+	public static function awaitAllActivePromises($ignoreExceptions = false) {
 		while( !empty(self::$activePromises) ) {
-			self::doLoopCycle(self::$activePromises);
+			try {
+				self::doLoopCycle(self::$activePromises);
+			}
+			catch(\Exception $ex) {
+				if( !$ignoreExceptions )
+					throw $ex;
+			}
 			if( !empty(self::$activePromises) )
 				usleep(100);
 		}

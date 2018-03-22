@@ -73,6 +73,30 @@ class Vector3 {
 		return new Vector3($this->x - $vector->x, $this->y - $vector->y, $this->z - (($vector instanceof Vector2) ? 1 : $vector->z));
 	}
 
+	public function lengthPow2() {
+		return $this->x * $this->x + $this->y * $this->y + $this->z * $this->z;
+	}
+
+	public function length() {
+		return sqrt($this->x * $this->x + $this->y * $this->y + $this->z * $this->z);
+	}
+
+	public function dot(Vector3 $other) {
+		return $this->x * $other->x + $this->y * $other->y + $this->z * $other->z;
+	}
+
+	public function cross(Vector3 $other) {
+		return new Vector3(
+			$this->y * $other->z - $this->z * $other->y,
+			$this->z * $other->x - $this->x * $other->z,
+			$this->x * $other->y - $this->y * $other->x
+		);
+	}
+
+	public function equals(Vector3 $other) {
+		return $this->x == $other->x && $this->y == $other->y && $this->z == $other->z;
+	}
+
 	public function __toString() {
 		return "vector3({$this->x}, {$this->y}, {$this->z})";
 	}

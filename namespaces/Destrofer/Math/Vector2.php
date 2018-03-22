@@ -66,6 +66,29 @@ class Vector2 {
 		return new Vector2($this->x - $vector->x, $this->y - $vector->y);
 	}
 
+	public function lengthPow2() {
+		return $this->x * $this->x + $this->y * $this->y;
+	}
+
+	public function length() {
+		return sqrt($this->x * $this->x + $this->y * $this->y);
+	}
+
+	public function dot(Vector2 $other) {
+		return $this->x * $other->x + $this->y * $other->y;
+	}
+
+	public function perpendicular() {
+		return new Vector2(
+			-$this->y,
+			$this->x
+		);
+	}
+
+	public function equals(Vector2 $other) {
+		return $this->x == $other->x && $this->y == $other->y;
+	}
+
 	public function __toString() {
 		return "vector2({$this->x}, {$this->y})";
 	}

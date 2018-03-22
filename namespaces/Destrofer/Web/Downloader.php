@@ -9,7 +9,6 @@
 namespace Destrofer\Web;
 
 use \Exception;
-use Destrofer\Web\Proxy;
 use TrueBV\Punycode;
 
 class Downloader {
@@ -132,7 +131,7 @@ class Downloader {
 	 *  - **verify** `bool` (optional) TRUE to verify SSL certificates on HTTPS request. Defaults to TRUE.
 	 *  - **maxRedirs** `int` (optional) Maximum number of redirects to follow. Defaults to 0.
 	 *  - **timeout** `float` (optional) Number of seconds before download operation is considered timed out and fails.
-	 *  - **proxy** {@see \Destrofer\Web\Proxy} (optional) Instance of the Proxy class to use for connection. Defaults to NULL.
+	 *  - **proxy** {@see Proxy} (optional) Instance of the Proxy class to use for connection. Defaults to NULL.
 	 *  - **headers** `array` (optional) An associative array of additional HTTP request headers to be sent. Key of array element is the header name. First request line also may be modified if array contains an element with the empty string key.
 	 *  - **noBody** `bool` (optional) Do not receive body. Defaults to FALSE on all request types except HEAD.
 	 *  - **curlOptions** `array` (optional) An associative array to be passed to {@see curl_setopt_array()} function before starting the download.
@@ -300,6 +299,12 @@ class Downloader {
 		$time = microtime(true);
 		while (self::$active && self::$lastErrorCode == CURLM_OK) {
 			$timeLeft = ($timeout === null) ? 1.0 : ($timeout - (microtime(true) - $time));
+			if( $timeLeft > 0 ) {
+				$select = curl_multi_select(self::$handle, $timeLeft);
+			    if( $select == -1 )
+					usleep(100);
+			}
+			self::doLoop();
 			if( $timeLeft <= 0 ) {
 				$finished = [];
 				foreach( self::$activeDownloads as $id => &$dl )
@@ -307,10 +312,6 @@ class Downloader {
 						$finished[] = $id;
 				return $finished;
 			}
-			$select = curl_multi_select(self::$handle, $timeLeft);
-		    if ( $select == -1)
-				usleep(100);
-			self::doLoop();
 		}
 		return (self::$lastErrorCode == CURLM_OK) ? array_keys(self::$activeDownloads) : false;
 	}
@@ -331,15 +332,16 @@ class Downloader {
 		$time = microtime(true);
 		while (self::$active && self::$lastErrorCode == CURLM_OK) {
 			$timeLeft = ($timeout === null) ? 1.0 : ($timeout - (microtime(true) - $time));
-			if( $timeLeft <= 0 )
-				return 0;
-			$select = curl_multi_select(self::$handle, $timeLeft);
-		    if ( $select == -1)
-				usleep(100);
-
+			if( $timeLeft > 0 ) {
+				$select = curl_multi_select(self::$handle, $timeLeft);
+				if( $select == -1 )
+					usleep(100);
+			}
 			self::doLoop();
 			if( self::$activeDownloads[$id]['done'] )
 				return $id;
+			if( $timeLeft <= 0 )
+				return 0;
 		}
 		return false;
 	}
@@ -362,17 +364,17 @@ class Downloader {
 		$time = microtime(true);
 		while (self::$active && self::$lastErrorCode == CURLM_OK) {
 			$timeLeft = ($timeout === null) ? 1.0 : ($timeout - (microtime(true) - $time));
-			if( $timeLeft <= 0 )
-				return 0;
-			$select = curl_multi_select(self::$handle, $timeLeft);
-		    if ( $select == -1)
-				usleep(10);
-
+			if( $timeLeft > 0 ) {
+				$select = curl_multi_select(self::$handle, $timeLeft);
+				if( $select == -1 )
+					usleep(10);
+			}
 			self::doLoop();
-
 			foreach( self::$activeDownloads as $id => &$dl )
 				if( $dl['done'] )
 					return $id;
+			if( $timeLeft <= 0 )
+				return 0;
 		}
 		return false;
 	}

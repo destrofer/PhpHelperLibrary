@@ -150,6 +150,8 @@ class Url {
 	}
 
 	public function getAbsoluteUrl() {
+		if( $this->scheme === "mailto" )
+			return "{$this->scheme}:{$this->path}";
 		$url = $this->scheme . '://';
 		if( $this->user !== null ) {
 			$url .= $this->user;

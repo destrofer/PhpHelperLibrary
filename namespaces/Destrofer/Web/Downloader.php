@@ -274,9 +274,9 @@ class Downloader {
 
 		self::$lastErrorCode = curl_multi_add_handle(self::$handle, $ch);
 		if( self::$lastErrorCode == CURLM_OK ) {
-			self::doLoop();
 			self::$activeDownloads[$downloadResult["id"]] = &$downloadResult;
 			self::$activeDownloadsIndex[(string)$ch] = $downloadResult["id"];
+			self::doLoop();
 			return $downloadResult["id"];
 		}
 		curl_close($ch);

@@ -16,7 +16,7 @@ class RangeList {
 	/**
 	 * @param array $newRange An array with at least two keys: 0 for range start and 1 for range end.
 	 * @param bool $checkIntersections If TRUE ranges that intersect with the new range are compared for priority and one of them is removed, truncated or split in two.
-	 * @param callable $priorityCheckCallback Must be either NULL or a callable function that is called on item range collision. The function must accept two parameters (two collided items) and return which item must keep its range unchanged (0 for first item and 1 for second). Defaults to NULL, which gives same results as giving function that always returns 0.
+	 * @param callable $priorityCheckCallback Must be either NULL or a callable function that is called on item range collision. The function must accept two parameters (two collided items) and return which item must keep its range unchanged (0 for first item and 1 for second). Alternatively function may return an array, that will be added into the list as a range in place of two intersected ranges (both intersected ranges will be removed from the list). Defaults to NULL, which gives same results as giving function that always returns 0.
 	 */
 	public function add($newRange, $checkIntersections = true, $priorityCheckCallback = null) {
 		$secondaryRanges = [];
@@ -27,6 +27,12 @@ class RangeList {
 			foreach($this->ranges as $idx => $range ) {
 				if( $newRange[1] > $range[0] && $newRange[0] < $range[1] ) {
 					$priority = $priorityCheckCallback ? $priorityCheckCallback($newRange, $range) : 0;
+					if( is_array($priority) ) {
+						$newRange = null; // do not add new range
+						unset($this->ranges[$idx]); // remove existing item
+						$secondaryRanges[] = $priority; // add range returned by callback (will call add() method again)
+						break;
+					}
 					if( $priority ) {
 						// keep already existing item intact
 						if( $newRange[0] >= $range[0] && $newRange[1] <= $range[1] ) {

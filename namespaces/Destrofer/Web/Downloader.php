@@ -488,7 +488,8 @@ class Downloader {
 	 * Usage example:
 	 * ```
 	 * $p = Downloader::promise(["url" => "http://example.com"])->then(function($result) {
-	 *     echo ($result["http_code"] == 200) ? htmlspecialchars($result["body"]) : ("HTTP error: " . $result["http_code"]);
+	 *     echo ($result["http_code"] == 200) ? htmlspecialchars($result["body"]) : ("HTTP error: " .
+	 * $result["http_code"]);
 	 * })->_catch(function($error) {
 	 *     echo "Download error: {$error}";
 	 * });
@@ -496,10 +497,11 @@ class Downloader {
 	 * $p->await();
 	 * ```
 	 *
-	 * @param array $options An associative array of download options.
+	 * @param array $options An associative array of download options. {@see beginDownload()}
 	 * @return Promise
-	 * @see beginDownload() for options array structure.
+	 * @throws Exception
 	 * @see endDownload() for associative array structure passed to fulfilled promise handler.
+	 * @see beginDownload() for options array structure.
 	 */
 	public static function promise($options) {
 		return new Promise(function($resolve, $reject) use(&$options) {
@@ -508,6 +510,7 @@ class Downloader {
 				$reject(Downloader::getLastError());
 				return;
 			}
+			$options["activeDownloadId"] = $id;
 			yield;
 			while(true) {
 				$result = Downloader::endDownload($id, 0);
@@ -523,6 +526,12 @@ class Downloader {
 					break;
 				}
 				yield;
+			}
+			unset($options["activeDownloadId"]);
+		}, function() use(&$options) {
+			if( isset($options["activeDownloadId"]) ) {
+				Downloader::cancelDownload($options["activeDownloadId"]);
+				unset($options["activeDownloadId"]);
 			}
 		});
 	}

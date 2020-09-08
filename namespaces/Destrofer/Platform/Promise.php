@@ -37,6 +37,8 @@ class Promise {
 	private $throwException = null;
 	/** @var null|Promise */
 	private $chainedPromise = null;
+	/** @var callable|null */
+	private $onAbort = null;
 
 	/** @var Promise[] */
 	private static $activePromises = [];
@@ -54,12 +56,14 @@ class Promise {
 	 * Passed `$resolve` and `$reject` are callback functions that accept exactly up to one parameter of type mixed
 	 *
 	 * @param callable $resolver
+	 * @param callable $onAbort This callback is called if promise gets aborted. In this case promise stops executing silently without calling either resolve or reject callbacks.
 	 * @throws \Exception
 	 */
-	public function __construct($resolver) {
+	public function __construct($resolver, $onAbort = null) {
 		if( self::$nextId == 1 )
 			register_shutdown_function([self::class, "awaitAllActivePromises"]);
 		$this->id = self::$nextId++;
+		$this->onAbort = $onAbort;
 		$this->generator = $resolver(function($value = null) {
 			$this->value = $value;
 			$this->state = self::STATE_FULFILLED;
@@ -254,6 +258,33 @@ class Promise {
 	}
 
 	/**
+	 * Stops promise from execution and prevents both resolve and reject callbacks from being called.
+	 *
+	 * This method also recursively aborts all chained promises.
+	 *
+	 * @throws \Exception
+	 */
+	public function abort() {
+		if( !isset(self::$activePromises[$this->id]) )
+			return;
+		/** @var \Exception|null $throwException */
+		$throwException = null;
+		if( $this->chainedPromise ) {
+			try {
+				$this->chainedPromise->abort();
+			}
+			catch(\Exception $ex) {
+				$throwException = $ex;
+			}
+		}
+		unset(self::$activePromises[$this->id]);
+		if( is_callable($this->onAbort) )
+			call_user_func($this->onAbort);
+		if( $throwException )
+			throw $throwException;
+	}
+
+	/**
 	 * @param Promise[] $promises
 	 * @return Promise[]
 	 */
@@ -321,6 +352,30 @@ class Promise {
 				usleep(100);
 		}
 		self::$activePromises = [];
+	}
+
+	/**
+	 * Stops execution of all currently active promises.
+	 *
+	 * All promises are always awaited in shutdown function at the end of script execution. This method is good when
+	 * you are handling an exception and no longer care about the result of currently running promises.
+	 *
+	 * @throws \Exception
+	 */
+	public static function abortAllPromises() {
+		$throwException = null;
+		while( !empty(self::$activePromises) ) {
+			$promise = reset(self::$activePromises);
+			try {
+				$promise->abort();
+			}
+			catch(\Exception $ex) {
+				$throwException = $ex;
+			}
+		}
+		self::$activePromises = [];
+		if( $throwException )
+			throw $throwException;
 	}
 
 	/**

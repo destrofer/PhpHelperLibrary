@@ -303,11 +303,14 @@ class Promise {
 	 * Waits till all currently active promises finish execution.
 	 *
 	 * @param bool $ignoreExceptions Set to TRUE to ignore all exceptions that happen during the waiting cycle.
+	 * @param callable $loopCallback This callback will be called without any parameters before every loop (every 100ms). Waiting for promises to finish will be canceled if callback returns a value that evaluates to TRUE.
 	 * @throws \Exception
 	 */
-	public static function awaitAllActivePromises($ignoreExceptions = false) {
+	public static function awaitAllActivePromises($ignoreExceptions = false, $loopCallback = null) {
 		while( !empty(self::$activePromises) ) {
 			try {
+				if( $loopCallback && is_callable($loopCallback) && call_user_func($loopCallback) )
+					return;
 				self::doLoopCycle(self::$activePromises);
 			}
 			catch(\Exception $ex) {

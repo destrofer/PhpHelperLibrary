@@ -79,7 +79,7 @@ class Downloader {
 			self::$lastErrorCode = curl_multi_exec(self::$handle, self::$active);
 			if( self::$lastErrorCode == CURLM_OK ) {
 				while( $result = curl_multi_info_read(self::$handle) ) {
-					$cid = (string)$result['handle'];
+					$cid = self::getObjectHash($result['handle']);
 					if( !isset(self::$activeDownloadsIndex[$cid]) )
 						continue;
 					$cid = self::$activeDownloadsIndex[$cid];
@@ -275,7 +275,7 @@ class Downloader {
 		self::$lastErrorCode = curl_multi_add_handle(self::$handle, $ch);
 		if( self::$lastErrorCode == CURLM_OK ) {
 			self::$activeDownloads[$downloadResult["id"]] = &$downloadResult;
-			self::$activeDownloadsIndex[(string)$ch] = $downloadResult["id"];
+			self::$activeDownloadsIndex[self::getObjectHash($ch)] = $downloadResult["id"];
 			self::doLoop();
 			return $downloadResult["id"];
 		}
@@ -412,7 +412,7 @@ class Downloader {
 			return null;
 		$data = &self::$activeDownloads[$id];
 		curl_multi_remove_handle(self::$handle, $data['handle']);
-		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle'], $data['done'], $data['header_ready_callback']);
+		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[self::getObjectHash($data['handle'])], $data['handle'], $data['done'], $data['header_ready_callback']);
 		return $data;
 	}
 
@@ -437,7 +437,7 @@ class Downloader {
 			return null;
 		$data = &self::$activeDownloads[$id];
 		curl_multi_remove_handle(self::$handle, $data['handle']);
-		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']], $data['handle'], $data['done'], $data['header_ready_callback']);
+		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[self::getObjectHash($data['handle'])], $data['handle'], $data['done'], $data['header_ready_callback']);
 		return $data;
 	}
 
@@ -455,7 +455,7 @@ class Downloader {
 		}
 		$data = self::$activeDownloads[$id];
 		curl_multi_remove_handle(self::$handle, $data['handle']);
-		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[(string)$data['handle']]);
+		unset(self::$activeDownloads[$id], self::$activeDownloadsIndex[self::getObjectHash($data['handle'])]);
 	}
 
 	/**
@@ -534,5 +534,14 @@ class Downloader {
 				unset($options["activeDownloadId"]);
 			}
 		});
+	}
+
+	/**
+	 * Compatibility method used to obtain hash of a curl handle in different PHP versions.
+	 * @param $object
+	 * @return string
+	 */
+	private static function getObjectHash($object) {
+		return is_resource($object) ? (string)$object : spl_object_hash($object);
 	}
 }

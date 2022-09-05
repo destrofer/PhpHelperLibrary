@@ -42,7 +42,7 @@ class Url {
 			else {
 				$parsedData = self::parse_url($url);
 				if( !is_array($parsedData) )
-					throw new Exception($url, "Cannot parse the given URL");
+					throw new Exception("Cannot parse the given URL");
 				foreach( $parsedData as $k => $v ) {
 					if( $k == 'query' ) {
 						$this->query = array();

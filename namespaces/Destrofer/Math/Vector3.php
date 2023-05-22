@@ -19,6 +19,8 @@ class Vector3 implements JsonSerializable {
 	public $z = 0;
 
 	/** @var Vector3 */
+	public static $zero;
+	/** @var Vector3 */
 	public static $left;
 	/** @var Vector3 */
 	public static $right;
@@ -32,6 +34,7 @@ class Vector3 implements JsonSerializable {
 	public static $forward;
 
 	public static function staticConstruct() {
+		self::$zero = new Vector3(0, 0, 0);
 		self::$left = new Vector3(-1, 0, 0);
 		self::$right = new Vector3(1, 0, 0);
 		self::$down = new Vector3(0, -1, 0);
@@ -111,6 +114,20 @@ class Vector3 implements JsonSerializable {
 	 */
 	public function subtract($vector) {
 		return new Vector3($this->x - $vector->x, $this->y - $vector->y, $this->z - (($vector instanceof Vector2) ? 0 : $vector->z));
+	}
+
+	/**
+	 * @param float $t
+	 * @param Vector3 $vector1
+	 * @param Vector3 $vector2
+	 * @return Vector3
+	 */
+	public static function lerp($t, $vector1, $vector2) {
+		return new Vector3(
+			$vector1->x + $t * ($vector2->x - $vector1->x),
+			$vector1->y + $t * ($vector2->y - $vector1->y),
+			$vector1->z + $t * ($vector2->z - $vector1->z)
+		);
 	}
 
 	/**

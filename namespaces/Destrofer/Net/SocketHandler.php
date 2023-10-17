@@ -75,7 +75,7 @@ abstract class SocketHandler {
 		return ( $this->lastErrorCode === 10035 // Windows: A non-blocking socket operation could not be completed immediately
 			|| $this->lastErrorCode === SOCKET_EINPROGRESS
 			|| $this->lastErrorCode === SOCKET_EALREADY
-			|| $this->lastErrorCode === SOCKET_EAGAIN // Linux: Resource temporarily unavailable
+			|| $this->lastErrorCode === (defined("SOCKET_EAGAIN") ? SOCKET_EAGAIN : SOCKET_EWOULDBLOCK) // Linux: Resource temporarily unavailable
 		);
 	}
 

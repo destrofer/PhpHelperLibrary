@@ -35,34 +35,39 @@ class Url {
 			$this->fragment = $url->fragment;
 			$this->pathIsLocal = $url->pathIsLocal;
 		}
-		else if( is_string($url) ) {
-			if( empty($url) ) {
-				$this->pathIsLocal = true;
+		else {
+			if( isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on' ) {
+				$this->scheme = "https";
 			}
-			else {
-				$parsedData = self::parse_url($url);
-				if( !is_array($parsedData) )
-					throw new Exception("Cannot parse the given URL");
-				foreach( $parsedData as $k => $v ) {
-					if( $k == 'query' ) {
-						$this->query = array();
-						parse_str($v, $this->query);
-					}
-					else
-						$this->$k = $v;
-				}
-				if( $relativeToBase === null && !isset($parsedData['host']) )
-					$relativeToBase = (empty($parsedData['path']) || $parsedData['path'][0] != '/');
-
-				if( !$relativeToBase && isset($_SERVER['HTTP_HOST']) && ($this->host === null || $this->host === $_SERVER['HTTP_HOST']) ) {
-					$len = strlen(self::$basePath);
-					if( strlen($this->path) >= $len && substr($this->path, 0, $len) === self::$basePath ) {
-						$this->path = substr($this->path, $len);
-						$this->pathIsLocal = true;
-					}
-				}
-				else if( $relativeToBase )
+			if( is_string($url) ) {
+				if( empty($url) ) {
 					$this->pathIsLocal = true;
+				}
+				else {
+					$parsedData = self::parse_url($url);
+					if( !is_array($parsedData) )
+						throw new Exception("Cannot parse the given URL");
+					foreach( $parsedData as $k => $v ) {
+						if( $k == 'query' ) {
+							$this->query = array();
+							parse_str($v, $this->query);
+						}
+						else
+							$this->$k = $v;
+					}
+					if( $relativeToBase === null && !isset($parsedData['host']) )
+						$relativeToBase = (empty($parsedData['path']) || $parsedData['path'][0] != '/');
+
+					if( !$relativeToBase && isset($_SERVER['HTTP_HOST']) && ($this->host === null || $this->host === $_SERVER['HTTP_HOST']) ) {
+						$len = strlen(self::$basePath);
+						if( strlen($this->path) >= $len && substr($this->path, 0, $len) === self::$basePath ) {
+							$this->path = substr($this->path, $len);
+							$this->pathIsLocal = true;
+						}
+					}
+					else if( $relativeToBase )
+						$this->pathIsLocal = true;
+				}
 			}
 		}
 	}

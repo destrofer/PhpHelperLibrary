@@ -159,10 +159,16 @@ class Logger {
 		$this->format = $format;
 	}
 
-	public function __destruct() {
+	protected function close() {
 		if( $this->fileHandle ) {
-			@fclose($this->fileHandle);
+			if( is_resource($this->fileHandle) )
+				@fclose($this->fileHandle);
+			$this->fileHandle = null;
 		}
+	}
+
+	public function __destruct() {
+		$this->close();
 	}
 
 	/**
@@ -173,9 +179,7 @@ class Logger {
 	 * @return void
 	 */
 	public function setFilePath($filePath) {
-		if( $this->fileHandle )
-			@fclose($this->fileHandle);
-		$this->fileHandle = null;
+		$this->close();
 		$this->filePath = $filePath;
 	}
 
@@ -238,7 +242,7 @@ class Logger {
 					$message
 				], $this->format);
 			}
-			if( $this->fileHandle )
+			if( $this->fileHandle && is_resource($this->fileHandle) ) // is_resource check is required to check if file was forcibly closed by PHP when shutting down
 				@fputs($this->fileHandle, self::replaceColorTags("{$message}\n", !$this->logColorsToFile));
 			if( $this->echoToConsole )
 				echo self::replaceColorTags("{$message}\n", !$this->logColorsToConsole);

@@ -22,6 +22,11 @@ class Downloader {
 	private static $lastErrorCode = CURLM_OK;
 	private static $nextDownloadId = 1;
 	private static $currentHeaderCallbackData = null;
+	private static $ignoreShutdown = false;
+
+	public static function setIgnoreShutdown($ignoreShutdown = true) {
+		self::$ignoreShutdown = $ignoreShutdown;
+	}
 
 	/**
 	 * Sets CURLMOPT_MAXCONNECTS multi-cURL option.
@@ -60,7 +65,7 @@ class Downloader {
 	 * script ends.
 	 */
 	public static function shutdown() {
-		if( !self::$handle )
+		if( !self::$handle || self::$ignoreShutdown )
 			return;
 		foreach( self::$activeDownloads as &$dl )
 			curl_multi_remove_handle(self::$handle, $dl['handle']);
@@ -283,18 +288,52 @@ class Downloader {
 	}
 
 	/**
+	 * @param $waitIdList
+	 * @param $limitToOne
+	 * @return int[]|int|null
+	 */
+	private static function getFinishedDownloadIds($waitIdList, $limitToOne) {
+		$finished = [];
+		if (is_array($waitIdList)) {
+			foreach ($waitIdList as $id) {
+				if (!isset(self::$activeDownloads[$id]) || self::$activeDownloads[$id]["done"]) {
+					if ($limitToOne)
+						return $id;
+					$finished[] = $id;
+				}
+			}
+		}
+		else {
+			foreach (self::$activeDownloads as $id => &$dl) {
+				if ($dl["done"]) {
+					if ($limitToOne)
+						return $id;
+					$finished[] = $id;
+				}
+			}
+		}
+		return $limitToOne ? null : $finished;
+	}
+
+	/**
 	 * Waits for all active downloads to finish.
 	 *
 	 * Be aware, that if operation times out it may return less download IDs than the number of downloads in the queue, or even an empty array.
 	 *
 	 * @param null|float $timeout (optional) Maximum time in seconds to wait for all downloads to finish. NULL means to wait indefinitely. Defaults to NULL.
+	 * @param null|int[] $waitIdList (optional) List of download identifiers to wait for. If This is an array, then waitAllDownloads() will return only ids from given list.
 	 * @return array|false Returns either an array of download IDs that are finished (independent from separate download results), or FALSE if there was an error with multi-cURL.
 	 */
-	public static function waitAllDownloads($timeout = null) {
+	public static function waitAllDownloads($timeout = null, $waitIdList = null) {
 		if( !self::$handle )
 			return false;
 		if( empty(self::$activeDownloads) )
 			return [];
+		if (is_array($waitIdList)) {
+			$finished = self::getFinishedDownloadIds($waitIdList, false);
+			if (count($finished) == count($waitIdList))
+				return $finished;
+		}
 		self::$lastErrorCode = CURLM_OK;
 		$time = microtime(true);
 		while (self::$active && self::$lastErrorCode == CURLM_OK) {
@@ -305,12 +344,14 @@ class Downloader {
 					usleep(100);
 			}
 			self::doLoop();
+
 			if( $timeLeft <= 0 ) {
-				$finished = [];
-				foreach( self::$activeDownloads as $id => &$dl )
-					if( $dl['done'] )
-						$finished[] = $id;
-				return $finished;
+				return self::getFinishedDownloadIds($waitIdList, false);
+			}
+			else if (!empty($waitIdList) && is_array($waitIdList)) {
+				$finished = self::getFinishedDownloadIds($waitIdList, false);
+				if (count($finished) == count($waitIdList))
+					return $finished;
 			}
 		}
 		return (self::$lastErrorCode == CURLM_OK) ? array_keys(self::$activeDownloads) : false;
@@ -350,16 +391,17 @@ class Downloader {
 	 * Waits for any download operation to finish.
 	 *
 	 * @param null|float $timeout (optional) Maximum time in seconds to wait for any download to finish. NULL means to wait indefinitely. Defaults to NULL.
+	 * @param null|int[] $waitIdList (optional) List of download identifiers to wait for. If This is a non-empty array, then waitAnyDownload() will return only one of given IDs.
 	 * @return int|false Returns download ID that has finished, 0 if operation times out, -1 if there are no active downloads, or FALSE if there was an error with multi-cURL.
 	 */
-	public static function waitAnyDownload($timeout = null) {
+	public static function waitAnyDownload($timeout = null, $waitIdList = null) {
 		if( !self::$handle )
 			return false;
 		if( empty(self::$activeDownloads) )
 			return -1;
-		foreach( self::$activeDownloads as $id => &$dl )
-			if( $dl['done'] )
-				return $id;
+		$id = self::getFinishedDownloadIds($waitIdList, true);
+		if ($id !== null)
+			return $id;
 		self::$lastErrorCode = CURLM_OK;
 		$time = microtime(true);
 		while (self::$active && self::$lastErrorCode == CURLM_OK) {
@@ -370,9 +412,9 @@ class Downloader {
 					usleep(10);
 			}
 			self::doLoop();
-			foreach( self::$activeDownloads as $id => &$dl )
-				if( $dl['done'] )
-					return $id;
+			$id = self::getFinishedDownloadIds($waitIdList, true);
+			if ($id !== null)
+				return $id;
 			if( $timeLeft <= 0 )
 				return 0;
 		}

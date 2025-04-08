@@ -54,7 +54,7 @@ class Downloader {
 			throw new Exception("Failed to initialize multi-cURL");
 		curl_multi_setopt(self::$handle, CURLMOPT_MAXCONNECTS, self::$maxConnections);
 		if( !self::$registeredShutdown )
-			register_shutdown_function(get_class() . '::shutdown');
+			register_shutdown_function([static::class, 'shutdown']);
 		self::$registeredShutdown = true;
 	}
 

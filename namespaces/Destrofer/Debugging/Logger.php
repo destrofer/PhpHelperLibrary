@@ -12,13 +12,31 @@ class Logger {
 
 	private static $colorTags = [
 		"{:RESET:}",
+		"{:RESET-FG:}",
+		"{:RESET-BG:}",
+		"{:RESET-COLORS:}",
+		"{:RESET-STYLE:}",
+
 		"{:BOLD:}",
 		"{:DIM:}",
 		"{:ITALIC:}",
 		"{:UNDERLINE:}",
+		"{:DOUBLE-UNDERLINE:}",
 		"{:BLINK:}",
+		"{:BLINK-FAST:}",
 		"{:INVERT:}",
+		"{:HIDDEN:}",
 		"{:STRIKE:}",
+
+		"{:NO-BOLD:}",
+		"{:NO-DIM:}",
+		"{:NO-ITALIC:}",
+		"{:NO-UNDERLINE:}",
+		"{:NO-BLINK:}",
+		"{:NO-INVERT:}",
+		"{:NO-HIDDEN:}",
+		"{:NO-STRIKE:}",
+
 		"{:BLACK:}",
 		"{:RED:}",
 		"{:GREEN:}",
@@ -27,7 +45,9 @@ class Logger {
 		"{:MAGENTA:}",
 		"{:CYAN:}",
 		"{:WHITE:}",
+
 		"{:GRAY:}",
+		"{:GREY:}",
 		"{:B-RED:}",
 		"{:B-GREEN:}",
 		"{:B-YELLOW:}",
@@ -35,6 +55,7 @@ class Logger {
 		"{:B-MAGENTA:}",
 		"{:B-CYAN:}",
 		"{:B-WHITE:}",
+
 		"{:BG-BLACK:}",
 		"{:BG-RED:}",
 		"{:BG-GREEN:}",
@@ -43,7 +64,9 @@ class Logger {
 		"{:BG-MAGENTA:}",
 		"{:BG-CYAN:}",
 		"{:BG-WHITE:}",
+
 		"{:BG-GRAY:}",
+		"{:BG-GREY:}",
 		"{:BG-B-RED:}",
 		"{:BG-B-GREEN:}",
 		"{:BG-B-YELLOW:}",
@@ -55,13 +78,31 @@ class Logger {
 
 	private static $aixColorTable = [
 		"\e[0m",
+		"\e[39m",
+		"\e[49m",
+		"\e[39m\e[49m",
+		"\e[22m\e[23m\e[24m\e[25m\e[27m\e[28m\e[29m",
+
 		"\e[1m",
 		"\e[2m",
 		"\e[3m",
 		"\e[4m",
+		"\e[21m",
 		"\e[5m",
+		"\e[6m",
 		"\e[7m",
+		"\e[8m",
 		"\e[9m",
+
+		"\e[22m",
+		"\e[22m",
+		"\e[23m",
+		"\e[24m",
+		"\e[25m",
+		"\e[27m",
+		"\e[28m",
+		"\e[29m",
+
 		"\e[30m",
 		"\e[31m",
 		"\e[32m",
@@ -70,6 +111,8 @@ class Logger {
 		"\e[35m",
 		"\e[36m",
 		"\e[37m",
+
+		"\e[90m",
 		"\e[90m",
 		"\e[91m",
 		"\e[92m",
@@ -78,6 +121,7 @@ class Logger {
 		"\e[95m",
 		"\e[96m",
 		"\e[97m",
+
 		"\e[40m",
 		"\e[41m",
 		"\e[42m",
@@ -86,6 +130,8 @@ class Logger {
 		"\e[45m",
 		"\e[46m",
 		"\e[47m",
+
+		"\e[100m",
 		"\e[100m",
 		"\e[101m",
 		"\e[102m",
@@ -185,25 +231,31 @@ class Logger {
 
 	/**
 	 * Removes or replaces color tags in the message with aixterm escape sequences
-	 * ({@link https://sites.ualberta.ca/dept/chemeng/AIX-43/share/man/info/C/a_doc_lib/cmds/aixcmds1/aixterm.htm}).
+	 * ({@link https://sites.ualberta.ca/dept/chemeng/AIX-43/share/man/info/C/a_doc_lib/cmds/aixcmds1/aixterm.htm},
+	 * {@link https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_(Select_Graphic_Rendition)_parameters}).
 	 *
 	 * List of supported tags:
 	 *
-	 * Resets all styles and effects: {:RESET:}. Don't forget to use this tag at the end of a message, otherwise effects
-	 * will be applied to all next logged messages until this tag is encountered.
+	 * Resets all styles, effects and colors: {:RESET:}. Don't forget to use this tag at the end of a message, otherwise
+	 * effects will be applied to all next logged messages until this tag is encountered.
 	 *
-	 * Adds a style of an effect: {:BOLD:}, {:DIM:}, {:ITALIC:}, {:UNDERLINE:}, {:BLINK:}, {:INVERT:}, {:STRIKE:}.
+	 * Resets colors: {:RESET-FG:}, {:RESET-BG:}, {:RESET-COLORS:}.
 	 *
-	 * Sets text color: {:BLACK:}, {:RED:}, {:GREEN:}, {:YELLOW:}, {:BLUE:}, {:MAGENTA:}, {:CYAN:}, {:WHITE:}.
+	 * Resets styles and visual effects: {:RESET-STYLE:}.
 	 *
-	 * Sets bright text color: {:GRAY:}, {:B-RED:}, {:B-GREEN:}, {:B-YELLOW:}, {:B-BLUE:}, {:B-MAGENTA:}, {:B-CYAN:},
-	 * {:B-WHITE:}.
+	 * Clears a style or a visual effect: {:NO-BOLD:}, {:NO-DIM:}, {:NO-ITALIC:}, {:NO-UNDERLINE:}, {:NO-BLINK:},
+	 * {:NO-INVERT:}, {:NO-HIDDEN:}, {::NO-STRIKE:}. Note that resetting either "bold" or "dim" clears both styles at
+	 * the same time.
+	 *
+	 * Adds a style or a visual effect: {:BOLD:}, {:DIM:}, {:ITALIC:}, {:UNDERLINE:}, {:DOUBLE-UNDERLINE:}, {:BLINK:},
+	 * {:BLINK-FAST:}, {:INVERT:}, {:HIDDEN:}, {:STRIKE:}.
+	 *
+	 * Sets text color: {:BLACK:}, {:RED:}, {:GREEN:}, {:YELLOW:}, {:BLUE:}, {:MAGENTA:}, {:CYAN:}, {:WHITE:},
+	 * {:GRAY:}, {:GREY:}, {:B-RED:}, {:B-GREEN:}, {:B-YELLOW:}, {:B-BLUE:}, {:B-MAGENTA:}, {:B-CYAN:}, {:B-WHITE:}.
 	 *
 	 * Sets background color: {:BG-BLACK:}, {:BG-RED:}, {:BG-GREEN:}, {:BG-YELLOW:}, {:BG-BLUE:}, {:BG-MAGENTA:},
-	 * {:BG-CYAN:}, {:BG-WHITE:}.
-	 *
-	 * Sets bright background color: {:BG-GRAY:}, {:BG-B-RED:}, {:BG-B-GREEN:}, {:BG-B-YELLOW:}, {:BG-B-BLUE:},
-	 * {:BG-B-MAGENTA:}, {:BG-B-CYAN:}, {:BG-B-WHITE:}.
+	 * {:BG-CYAN:}, {:BG-WHITE:}, {:BG-GRAY:}, {:BG-GREY:}, {:BG-B-RED:}, {:BG-B-GREEN:}, {:BG-B-YELLOW:},
+	 * {:BG-B-BLUE:}, {:BG-B-MAGENTA:}, {:BG-B-CYAN:}, {:BG-B-WHITE:}.
 	 *
 	 * @param string $message Message containing color tags.
 	 * @param bool $removeColors If set to true tags will be removed from the message.

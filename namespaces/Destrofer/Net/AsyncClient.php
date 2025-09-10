@@ -426,4 +426,18 @@ abstract class AsyncClient extends SocketHandler {
 		if( $wasConnected )
 			$this->onDisconnect();
 	}
+
+	/**
+	 * @return string|null
+	 */
+	public function getRemoteAddr() {
+		return $this->remoteAddr;
+	}
+
+	/**
+	 * @return int|null
+	 */
+	public function getRemotePort() {
+		return $this->remotePort;
+	}
 }

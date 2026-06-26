@@ -1,10 +1,10 @@
 # PhpHelperLibrary
-A PHP 5.5 class library to make coders life easier.
+A PHP 8.2 class library to make coders life easier.
 All sources can be located at: https://github.com/destrofer/PhpHelperLibrary
 
 == Installing ==
 
-As of version 3 PhpHelperLibrary no longer has autoloader by itself. However it
+As of version 3 PhpHelperLibrary no longer has autoloader by itself. However, it
 may be installed using [Composer](https://getcomposer.org/), which has its own
 autoloader.
 
@@ -12,10 +12,10 @@ After installing composer you can add dependency of your project on this package
 by executing following command:
 
 ```
-php composer.phar require destrofer/helper-library:^v3.0.0
+php composer.phar require destrofer/helper-library:^v4.0.0
 ```
 
-or by adding `"destrofer/helper-library": "^v3.0.0"` to `require` block in
+or by adding `"destrofer/helper-library": "^v4.0.0"` to `require` block in
 `composer.json`.
 
 == License ==

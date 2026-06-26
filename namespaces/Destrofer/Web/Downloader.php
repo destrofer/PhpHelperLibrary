@@ -8,6 +8,7 @@
 
 namespace Destrofer\Web;
 
+use Destrofer\Parallel\Coroutine;
 use Destrofer\Platform\Promise;
 use \Exception;
 use TrueBV\Punycode;
@@ -341,7 +342,7 @@ class Downloader {
 			if( $timeLeft > 0 ) {
 				$select = curl_multi_select(self::$handle, $timeLeft);
 			    if( $select == -1 )
-					usleep(100);
+					Coroutine::waitSeconds(0.0001);
 			}
 			self::doLoop();
 
@@ -353,6 +354,7 @@ class Downloader {
 				if (count($finished) == count($waitIdList))
 					return $finished;
 			}
+			Coroutine::waitNextFrame();
 		}
 		return (self::$lastErrorCode == CURLM_OK) ? array_keys(self::$activeDownloads) : false;
 	}
@@ -376,13 +378,14 @@ class Downloader {
 			if( $timeLeft > 0 ) {
 				$select = curl_multi_select(self::$handle, $timeLeft);
 				if( $select == -1 )
-					usleep(100);
+					Coroutine::waitSeconds(0.0001);
 			}
 			self::doLoop();
 			if( self::$activeDownloads[$id]['done'] )
 				return $id;
 			if( $timeLeft <= 0 )
 				return 0;
+			Coroutine::waitNextFrame();
 		}
 		return false;
 	}
@@ -409,7 +412,7 @@ class Downloader {
 			if( $timeLeft > 0 ) {
 				$select = curl_multi_select(self::$handle, $timeLeft);
 				if( $select == -1 )
-					usleep(10);
+					Coroutine::waitSeconds(0.0001);
 			}
 			self::doLoop();
 			$id = self::getFinishedDownloadIds($waitIdList, true);
@@ -417,6 +420,7 @@ class Downloader {
 				return $id;
 			if( $timeLeft <= 0 )
 				return 0;
+			Coroutine::waitNextFrame();
 		}
 		return false;
 	}

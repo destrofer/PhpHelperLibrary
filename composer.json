@@ -18,6 +18,9 @@
     },
     "require-dev": {
     },
+    "suggest": {
+        "ext-sockets": "Needed by the Destrofer\\Net async classes (AsyncClient, AsyncServer)"
+    },
     "autoload": {
         "psr-4": {
             "Destrofer\\": "namespaces\\Destrofer"

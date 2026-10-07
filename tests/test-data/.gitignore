@@ -1,0 +1,4 @@
+# Run artefacts only - log files and the pages the downloader test writes.
+# This file also keeps the otherwise empty directory in the repository.
+*.log
+*.html

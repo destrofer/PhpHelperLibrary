@@ -230,7 +230,8 @@ class Downloader {
 				if( isset($head[1]) )
 					$downloadResult['header'][strtoupper($head[0])] = ltrim($head[1]);
 				else
-					$downloadResult['header'][null] = $head[0];
+					// no colon in the line: HTTP status line and the like - the empty string is the key
+					$downloadResult['header'][''] = $head[0];
 			}
 			else if( $downloadResult["header_ready_callback"] ) {
 				self::$currentHeaderCallbackData = &$downloadResult;

@@ -1,0 +1,17 @@
+# Line endings: repository and working tree are LF-only.
+# CRLF in the tree was an artefact of editing on a Windows host. text=auto keeps binaries
+# binary, and eol=lf makes checkouts LF too, so pull/push is LF whatever a contributor's
+# own git config says about line endings.
+* text=auto eol=lf
+
+# Files that are part of the repository but are NOT part of a distributed package.
+#
+# Consumers install destrofer/helper-library as a GitHub zipball, and git archives - what GitHub
+# and Packagist serve - honour export-ignore. (Verified against symfony/console's published zipball:
+# no Tests directory, although the repository has one.) `composer archive` additionally honours the
+# archive.exclude list in composer.json.
+#
+# Note: unlike .gitignore, an attribute pattern does not recurse into a directory, and a recursive
+# pattern does not match the directory entry itself - hence both lines.
+tests export-ignore
+tests/** export-ignore

@@ -1,3 +1,7 @@
 /.idea
 /nbproject
 php_errors.log
+
+# build and dev artefacts - never part of the package
+/vendor/
+/composer.lock

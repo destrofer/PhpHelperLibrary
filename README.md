@@ -18,6 +18,29 @@ php composer.phar require destrofer/helper-library:^v4.0.0
 or by adding `"destrofer/helper-library": "^v4.0.0"` to `require` block in
 `composer.json`.
 
+== Tests ==
+
+Test scripts under `tests/` exercise the components that are used in production. They
+are part of the repository but not part of the package: `tests/` carries `export-ignore`
+in `.gitattributes`, so the archives that GitHub and Packagist serve contain no tests at
+all, and `composer archive` excludes them too through the `archive.exclude` list in
+`composer.json`.
+
+Run them from inside the `tests` directory, after installing the library's own
+dependencies:
+
+```
+php composer.phar install
+cd tests
+php test-logger.php
+```
+
+`tests/test-data/` holds only run artefacts - log files, and the pages the downloader test
+writes - which are ignored by the `.gitignore` inside it. That file also keeps the otherwise
+empty directory in the repository. The socket-based `test-async-*` scripts additionally need
+the `sockets` extension, because `Destrofer\Net` uses `socket_*` functions; run them where
+it is available.
+
 == License ==
 
 Copyright 2016 Viacheslav Soroka
